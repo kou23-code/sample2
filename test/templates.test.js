@@ -37,7 +37,7 @@ test('教室カードの申込リンクは .html まで明記し教室IDを渡�
 
 test('1クラスの教室カードに対象・曜日・時間・定員・会費・会場が表示される', () => {
   const html = tpl.classCardHtml(CLASSES_DATA[1], AGE_GROUPS);
-  ['小学3年生〜中学3年生', '火曜日コース・木曜日コース', '18:30〜19:30', '各クラス40名', '7,000円／3ヶ月（全10回）']
+  ['小学3年生〜中学3年生', '火曜日', '18:30〜19:30', '各クラス40名', '7,000円／3ヶ月（全10回）']
     .forEach((text) => assert.ok(html.includes(text), text));
   assert.equal(html.includes('class-card__sessions'), false);
 });

@@ -20,7 +20,7 @@ const NEWS_DATA = Object.freeze([
   Object.freeze({
     id: 'n-2026-09-20', date: '2026-09-20', category: 'class',
     title: '陸上教室②の練習時間が変わります',
-    body: '10月から火曜日コース・木曜日コースとも、練習時間を18:30〜19:30に変更します。',
+    body: '10月から火曜日の練習時間を18:30〜19:30に変更します。',
   }),
   Object.freeze({
     id: 'n-2026-09-05', date: '2026-09-05', category: 'info',

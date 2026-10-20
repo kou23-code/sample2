@@ -23,9 +23,9 @@ const CLASSES_DATA = Object.freeze([
   }),
   Object.freeze({
     id: 'track-teen', icon: '⏱️', name: '陸上教室②', ages: Object.freeze(['elementary', 'teen']),
-    day: '火曜日コース・木曜日コース', sessions: Object.freeze([classSession('', '小学3年生〜中学3年生', '18:30〜19:30', 40, '各クラス')]),
+    day: '火曜日', sessions: Object.freeze([classSession('', '小学3年生〜中学3年生', '18:30〜19:30', 40, '各クラス')]),
     fee: classFee(7000, '3ヶ月', 10), annualFee: 0, place: 'さくら町運動公園 陸上競技場',
-    summary: '専門的な練習で記録への挑戦をめざします。火曜日・木曜日のどちらかのコースを選べます。',
+    summary: '専門的な練習で、記録への挑戦をめざします。',
   }),
   Object.freeze({
     id: 'play', icon: '🤸', name: '運動あそび教室', ages: Object.freeze(['preschool', 'elementary']),
