@@ -59,6 +59,12 @@ test('送信内容の確認表示を作り、入力値はエスケープされ�
   assert.match(tpl.completionTableHtml(rows), /&lt;b&gt;架空&lt;\/b&gt;/);
 });
 
+test('件数・エラー件数の案内文を作る', () => {
+  assert.equal(tpl.resultCountText(7, '教室'), '7教室を表示しています。');
+  assert.equal(tpl.errorSummaryText(0), '');
+  assert.match(tpl.errorSummaryText(2), /2件の確認事項/);
+});
+
 test('希望教室なしは「指定なし」', () => {
   const rows = tpl.completionRows({ inquiryType: 'other', classId: '' }, CLASSES_DATA);
   assert.deepEqual(rows[1], ['希望教室', '指定なし']);

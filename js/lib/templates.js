@@ -93,9 +93,17 @@ const completionTableHtml = (rows) =>
   `<dl class="summary-list">${rows.map(([label, value]) =>
     `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>`;
 
+// ---- 案内文 ----
+
+const resultCountText = (count, unit) => `${count}${unit}を表示しています。`;
+
+const errorSummaryText = (count) =>
+  count === 0 ? '' : `入力内容に${count}件の確認事項があります。赤字の説明をご確認ください。`;
+
 if (typeof module === 'object' && module.exports) {
   module.exports = {
     escapeHtml, newsListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml,
     classOptionsHtml, inquiryTypeRadiosHtml, completionRows, completionTableHtml,
+    resultCountText, errorSummaryText,
   };
 }

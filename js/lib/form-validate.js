@@ -59,9 +59,17 @@ const validateForm = (raw, classIds) => {
 // 種別IDから表示名を引く
 const inquiryTypeLabel = (typeId) => INQUIRY_TYPES.find((type) => type.id === typeId)?.label ?? '';
 
+// URLのクエリ（?type=trial&class=play）から初期選択値を取り出す。不正な値は空にする
+const parseContactQuery = (search, classIds) => {
+  const params = new URLSearchParams(search);
+  const classId = classIds.includes(params.get('class')) ? params.get('class') : '';
+  const typeId = INQUIRY_TYPES.some((type) => type.id === params.get('type')) ? params.get('type') : '';
+  return Object.freeze({ type: typeId || (classId ? 'trial' : ''), classId });
+};
+
 if (typeof module === 'object' && module.exports) {
   module.exports = {
     INQUIRY_TYPES, FORM_FIELDS, isBlank, isEmail, isTel,
-    normalizeFormValues, validateForm, inquiryTypeLabel,
+    normalizeFormValues, validateForm, inquiryTypeLabel, parseContactQuery,
   };
 }

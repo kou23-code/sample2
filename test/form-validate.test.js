@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  validateForm, normalizeFormValues, isEmail, isTel, inquiryTypeLabel,
+  validateForm, normalizeFormValues, isEmail, isTel, inquiryTypeLabel, parseContactQuery,
 } = require('../js/lib/form-validate.js');
 
 const CLASS_IDS = ['track-kids', 'table-tennis'];
@@ -66,6 +66,17 @@ test('入力値は前後空白が除去され、元の入力は変更されな�
   assert.equal(normalizeFormValues(raw).name, '架空 花子');
   assert.equal(raw.name, '  架空 花子  ');
   assert.equal(validateForm({ ...validTrial, name: '   ' }, CLASS_IDS).valid, false);
+});
+
+test('URLクエリから初期選択値を取り出す', () => {
+  assert.deepEqual(parseContactQuery('?type=trial&class=track-kids', CLASS_IDS), { type: 'trial', classId: 'track-kids' });
+  assert.deepEqual(parseContactQuery('?class=table-tennis', CLASS_IDS), { type: 'trial', classId: 'table-tennis' });
+  assert.deepEqual(parseContactQuery('?type=question', CLASS_IDS), { type: 'question', classId: '' });
+});
+
+test('URLクエリの不正な値は無視する', () => {
+  assert.deepEqual(parseContactQuery('?type=<x>&class=fake', CLASS_IDS), { type: '', classId: '' });
+  assert.deepEqual(parseContactQuery('', CLASS_IDS), { type: '', classId: '' });
 });
 
 test('種別の表示名を引ける', () => {
