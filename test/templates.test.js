@@ -35,8 +35,30 @@ test('教室カードの申込リンクは .html まで明記し教室IDを渡�
   assert.match(html, /陸上教室①/);
 });
 
-test('ハイライトのリンクは ./classes.html#ID 形式', () => {
-  assert.match(tpl.classHighlightHtml(CLASSES_DATA[4]), /href="\.\/classes\.html#table-tennis"/);
+test('1クラスの教室カードに対象・曜日・時間・定員・会費・会場が表示される', () => {
+  const html = tpl.classCardHtml(CLASSES_DATA[1], AGE_GROUPS);
+  ['小学3年生〜中学3年生', '火曜日コース・木曜日コース', '18:30〜19:30', '各クラス40名', '7,000円／3ヶ月（全10回）']
+    .forEach((text) => assert.ok(html.includes(text), text));
+  assert.equal(html.includes('class-card__sessions'), false);
+});
+
+test('複数クラスの教室カードはクラスごとの時間・定員を表示する', () => {
+  const html = tpl.classCardHtml(CLASSES_DATA[2], AGE_GROUPS);
+  assert.equal((html.match(/class="class-session"/g) ?? []).length, 2);
+  assert.match(html, /① 年少〜年長[\s\S]*17:00〜18:00[\s\S]*20名[\s\S]*② 小学生[\s\S]*18:15〜19:15[\s\S]*25名/);
+});
+
+test('体操教室のカードには年会費が表示される', () => {
+  const html = tpl.classCardHtml(CLASSES_DATA[3], AGE_GROUPS);
+  assert.match(html, /<dt>会費<\/dt><dd>3,600円<\/dd>/);
+  assert.match(html, /<dt>年会費<\/dt><dd>1,000円<\/dd>/);
+  assert.equal(tpl.classCardHtml(CLASSES_DATA[4], AGE_GROUPS).includes('年会費'), false);
+});
+
+test('ハイライトのリンクは ./classes.html#ID 形式で、対象と曜日を表示', () => {
+  const html = tpl.classHighlightHtml(CLASSES_DATA[4]);
+  assert.match(html, /href="\.\/classes\.html#table-tennis"/);
+  assert.match(html, /小学生〜大人／水曜日/);
 });
 
 test('教室の選択肢は7教室＋未選択で、指定IDが選択済みになる', () => {

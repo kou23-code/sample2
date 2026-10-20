@@ -192,6 +192,12 @@ p { margin: 0 0 1em; }
 .class-card__details div { display: grid; grid-template-columns: 3.5em 1fr; gap: 8px; }
 .class-card__details dt { font-weight: 700; color: var(--color-green); }
 .class-card__details dd { margin: 0; }
+.class-card__details--fee { background: #fff8ec; }
+.class-card__details--fee dt { color: var(--color-accent-dark); }
+.class-card__details--session { padding: 0; background: none; }
+.class-card__sessions { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+.class-session { padding: 10px 14px; border: 2px solid var(--color-primary-soft); border-radius: var(--radius-small); }
+.class-session__title { margin: 0 0 4px; font-weight: 700; color: var(--color-primary-dark); }
 .class-card .button { margin-top: auto; }
 
 /* ---------- 電話・問い合わせ導線 ---------- */
