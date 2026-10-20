@@ -38,6 +38,10 @@ PAGES.forEach((page) => {
   });
 });
 
+test('教室案内・クラブ概要に共通の会費システム表示枠がある', () => {
+  ['classes.html', 'about.html'].forEach((page) => assert.match(readPage(page), /data-fee-system/, page));
+});
+
 test('ファイル名・フォルダ名は半角英数字とハイフンのみ（拡張子のドットを除く）', () => {
   const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true })
     .filter((entry) => !entry.name.startsWith('.') && entry.name !== 'node_modules')

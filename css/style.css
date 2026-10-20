@@ -200,6 +200,26 @@ p { margin: 0 0 1em; }
 .class-session__title { margin: 0 0 4px; font-weight: 700; color: var(--color-primary-dark); }
 .class-card .button { margin-top: auto; }
 
+/* ---------- 会費システム（全教室共通） ---------- */
+
+.section--compact { padding-bottom: 0; }
+.section--after-compact { padding-top: 32px; }
+.fee-system { margin-bottom: 20px; padding: 20px 24px; background: var(--color-surface); border: 3px solid var(--color-green); border-radius: var(--radius); box-shadow: var(--shadow); }
+.fee-system__title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; font-size: 1.25rem; color: var(--color-green); }
+.fee-system__badge { padding: 0 12px; border-radius: 999px; background: var(--color-green); color: #fff; font-size: 0.85rem; line-height: 1.9; }
+.fee-terms { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); }
+.fee-terms li { display: grid; text-align: center; padding: 8px; border-radius: var(--radius-small); background: var(--color-green-soft); line-height: 1.5; }
+.fee-terms__label { font-size: 0.9rem; font-weight: 700; color: var(--color-green); }
+.fee-terms__months { font-size: 1.15rem; font-weight: 700; }
+.fee-system__rows { margin: 0; display: grid; gap: 6px; }
+.fee-system__rows div { display: grid; grid-template-columns: 6em 1fr; gap: 12px; }
+.fee-system__rows dt { font-weight: 700; color: var(--color-green); }
+.fee-system__rows dd { margin: 0; }
+@media (max-width: 479px) {
+  .fee-system { padding: 16px; }
+  .fee-system__rows div { grid-template-columns: 1fr; gap: 0; }
+}
+
 /* ---------- 電話・問い合わせ導線 ---------- */
 
 .contact-cta { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }

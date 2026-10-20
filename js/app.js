@@ -22,8 +22,13 @@ const applyTelLinks = (doc, config) =>
 const markCurrentNav = (doc) =>
   doc.querySelectorAll(`[data-nav="${doc.body.dataset.page}"]`).forEach((el) => el.setAttribute('aria-current', 'page'));
 
+// data-fee-system を置いたページに全教室共通の会費システムを表示する
+const renderFeeSystem = (doc) =>
+  doc.querySelectorAll('[data-fee-system]').forEach((el) => renderHtml(el, feeSystemHtml(FEE_SYSTEM)));
+
 const applyCommon = (doc, config) => {
   applyConfigText(doc, config);
+  renderFeeSystem(doc);
   applyTelLinks(doc, config);
   markCurrentNav(doc);
   doc.title = buildPageTitle(doc.body.dataset.pageTitle, config.clubName);

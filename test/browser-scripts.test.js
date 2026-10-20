@@ -29,6 +29,11 @@ test('ブラウザ環境でもテンプレートが依存関数を参照でき�
   assert.match(vm.runInContext('newsListHtml(latestNews(NEWS_DATA, 1), NEWS_CATEGORIES)', context), /2026年10月15日/);
 });
 
+test('ブラウザ環境でも会費システムを組み立てられる', () => {
+  const context = loadScripts('');
+  assert.match(vm.runInContext('feeSystemHtml(FEE_SYSTEM)', context), /年間を4期/);
+});
+
 test('config.js 未配置ならダミー設定を使う', () => {
   const context = loadScripts('');
   assert.equal(vm.runInContext('resolveSiteConfig().clubName', context), 'あおぞら総合型地域スポーツクラブ');
