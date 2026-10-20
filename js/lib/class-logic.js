@@ -69,11 +69,14 @@ const yenRangeText = (amounts) => {
 // 保険料の幅
 const insuranceRangeText = (insurance) => yenRangeText(insurance.plans.map((plan) => plan.amount));
 
+// 教室の会費（1期あたり）の幅
+const classFeeRangeText = (classes) => yenRangeText(classes.map((item) => item.fee.amount));
+
 if (typeof module === 'object' && module.exports) {
   module.exports = {
     filterClassesByAge, findClassById, classDisplayName, ageLabels,
     formatYen, formatFee, formatCapacity, sessionHeading, classTargetSummary,
     hasMultipleSessions, sessionRows, classMainRows, classFeeRows, feeTermsText, feeSystemRows,
-    insuranceTitle, insuranceRows, yenRangeText, insuranceRangeText,
+    insuranceTitle, insuranceRows, yenRangeText, insuranceRangeText, classFeeRangeText,
   };
 }

@@ -71,6 +71,8 @@ const FEE_SYSTEM = Object.freeze({
   annualFee: 1000,
   annualFeeNote: '年度内1回のみ。複数教室を受講する場合も1回のみで可',
   classFeeNote: '各教室の会費は期ごとの支払いとなります。',
+  trialNote: '各教室1回まで無料',
+  disclaimer: '※金額はすべて目安です。くわしくはお電話またはお問い合わせフォームでおたずねください。',
 });
 
 // スポーツ安全保険（任意加入）の区分ごとの料金

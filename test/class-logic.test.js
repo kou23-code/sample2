@@ -7,7 +7,7 @@ const {
   filterClassesByAge, findClassById, classDisplayName, ageLabels,
   formatYen, formatFee, formatCapacity, sessionHeading, classTargetSummary,
   hasMultipleSessions, sessionRows, classMainRows, classFeeRows, feeTermsText, feeSystemRows,
-  insuranceTitle, insuranceRows, insuranceRangeText,
+  insuranceTitle, insuranceRows, insuranceRangeText, yenRangeText, classFeeRangeText,
 } = require('../js/lib/class-logic.js');
 
 const byId = (id) => findClassById(CLASSES_DATA, id);
@@ -137,6 +137,16 @@ test('保険料の幅を表示用にまとめる', () => {
   assert.equal(insuranceRangeText(SPORTS_INSURANCE), '800円〜2,000円');
   assert.equal(insuranceRangeText({ plans: [insurancePlan('一律', 500)] }), '500円');
   assert.equal(insuranceTitle({ name: '保険A', optional: false }), '保険A');
+});
+
+test('金額の幅を作る', () => {
+  assert.equal(yenRangeText([2000, 800, 1200]), '800円〜2,000円');
+  assert.equal(yenRangeText([500, 500]), '500円');
+});
+
+test('教室の会費の幅は教室データから計算する', () => {
+  assert.equal(classFeeRangeText(CLASSES_DATA), '3,600円〜7,000円');
+  assert.equal(classFeeRangeText([byId('play')]), '4,800円');
 });
 
 test('抽出関数は元データを変更しない', () => {

@@ -76,6 +76,23 @@ test('スポーツ安全保険の料金表に3区分が並ぶ', () => {
   assert.match(html, /ご加入は任意です/);
 });
 
+test('「会費について」ブロックは会費システム・3行の表・注記をこの順で含む', () => {
+  const html = tpl.feeInfoHtml(CLASSES_DATA, FEE_SYSTEM, SPORTS_INSURANCE);
+  assert.match(html, /class="fee-system"[\s\S]*全教室共通[\s\S]*class="info-table"[\s\S]*class="note"/);
+  const positions = ['教室の会費', 'スポーツ安全保険（任意）', '体験参加'].map((head) => html.indexOf(`<th scope="row">${head}</th>`));
+  assert.equal(positions.every((pos) => pos > 0), true);
+  assert.deepEqual([...positions].sort((a, b) => a - b), positions);
+});
+
+test('「会費について」ブロックの各行の内容', () => {
+  const html = tpl.feeInfoHtml(CLASSES_DATA, FEE_SYSTEM, SPORTS_INSURANCE);
+  assert.match(html, /1期あたり 3,600円〜7,000円/);
+  assert.match(html, /href="\.\/classes\.html#class-list-heading"/);
+  assert.match(html, /<details class="insurance">[\s\S]*800円〜2,000円/);
+  assert.match(html, /<td>各教室1回まで無料<\/td>/);
+  assert.match(html, /※金額はすべて目安です。/);
+});
+
 test('ハイライトのリンクは ./classes.html#ID 形式で、対象と曜日を表示', () => {
   const html = tpl.classHighlightHtml(CLASSES_DATA[4]);
   assert.match(html, /href="\.\/classes\.html#table-tennis"/);

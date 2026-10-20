@@ -6,7 +6,7 @@ const tplDeps = typeof module === 'object' && module.exports
   : {
     formatDateJa, categoryLabel, classDisplayName, ageLabels, inquiryTypeLabel,
     classMainRows, classFeeRows, sessionRows, sessionHeading, classTargetSummary, hasMultipleSessions,
-    feeSystemRows, insuranceTitle, insuranceRows, insuranceRangeText,
+    feeSystemRows, insuranceTitle, insuranceRows, insuranceRangeText, classFeeRangeText,
   };
 
 const HTML_ESCAPES = Object.freeze({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' });
@@ -112,6 +112,26 @@ const insuranceHtml = (insurance) => `
     <p class="insurance__note">${escapeHtml(insurance.note)}</p>
   </details>`;
 
+// ---- 「会費について」ブロック全体（クラブ概要・教室案内で共通） ----
+
+const feeInfoTableHtml = (classes, feeSystem, insurance) => `
+  <table class="info-table">
+    <tbody>
+      <tr><th scope="row">教室の会費</th><td>1期あたり ${escapeHtml(tplDeps.classFeeRangeText(classes))}（教室ごとの金額・回数は<a href="./classes.html#class-list-heading">教室案内</a>をご覧ください）</td></tr>
+      <tr><th scope="row">${escapeHtml(tplDeps.insuranceTitle(insurance))}</th><td>${insuranceHtml(insurance)}</td></tr>
+      <tr><th scope="row">体験参加</th><td>${escapeHtml(feeSystem.trialNote)}</td></tr>
+    </tbody>
+  </table>`;
+
+// 見出し「会費について」はページ側に置き、その下の会費システム・表・注記を返す
+const feeInfoHtml = (classes, feeSystem, insurance) => `
+  <div class="fee-system">
+    <h3 class="fee-system__title">会費システム<span class="fee-system__badge">全教室共通</span></h3>
+    ${feeSystemHtml(feeSystem)}
+  </div>
+  ${feeInfoTableHtml(classes, feeSystem, insurance)}
+  <p class="note">${escapeHtml(feeSystem.disclaimer)}</p>`;
+
 // ---- フォーム ----
 
 const classOptionsHtml = (classes, selectedId) =>
@@ -144,7 +164,7 @@ const errorSummaryText = (count) =>
 
 if (typeof module === 'object' && module.exports) {
   module.exports = {
-    escapeHtml, newsListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml, feeSystemHtml, insuranceHtml,
+    escapeHtml, newsListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml, feeSystemHtml, insuranceHtml, feeInfoHtml,
     classOptionsHtml, inquiryTypeRadiosHtml, completionRows, completionTableHtml,
     resultCountText, errorSummaryText,
   };
