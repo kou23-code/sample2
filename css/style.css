@@ -233,7 +233,7 @@ p { margin: 0 0 1em; }
 .insurance[open] .insurance__toggle::before { transform: rotate(90deg); }
 .insurance summary:hover .insurance__toggle { color: var(--color-primary-dark); }
 .mini-table { margin: 8px 0 4px; border-collapse: collapse; font-size: 0.95rem; min-width: min(100%, 260px); }
-.mini-table th, .mini-table td { padding: 4px 14px; border-bottom: 1px solid var(--color-border); text-align: left; font-weight: normal; }
+.mini-table th, .mini-table td { padding: 4px 14px; border-bottom: 1px solid var(--color-border); text-align: left; font-weight: normal; white-space: nowrap; }
 .mini-table thead th { font-size: 0.85rem; color: var(--color-muted); }
 .mini-table tbody td { text-align: right; font-weight: 700; }
 .insurance__note { margin: 4px 0 0; font-size: 0.85rem; color: var(--color-muted); }
@@ -266,6 +266,11 @@ p { margin: 0 0 1em; }
 .info-table > tbody > tr > th, .info-table > tbody > tr > td { padding: 14px 16px; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: top; }
 .info-table > tbody > tr > th { width: 30%; background: var(--color-primary-soft); color: var(--color-primary-dark); word-break: keep-all; }
 .info-table > tbody > tr:last-child > th, .info-table > tbody > tr:last-child > td { border-bottom: none; }
+/* 狭い画面では見出しと内容を縦に並べ、内容欄の幅を確保する */
+@media (max-width: 479px) {
+  .info-table > tbody > tr > th, .info-table > tbody > tr > td { display: block; width: auto; }
+  .info-table > tbody > tr > th { padding-bottom: 6px; border-bottom: none; }
+}
 
 .principles { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
 .principles li { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; border-left: 6px solid var(--color-green); }
