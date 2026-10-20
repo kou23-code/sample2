@@ -6,6 +6,7 @@ const tplDeps = typeof module === 'object' && module.exports
   : {
     formatDateJa, categoryLabel, classDisplayName, ageLabels, inquiryTypeLabel,
     classMainRows, classFeeRows, sessionRows, sessionHeading, classTargetSummary, hasMultipleSessions,
+    feeSystemRows,
   };
 
 const HTML_ESCAPES = Object.freeze({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' });
@@ -81,6 +82,19 @@ const classHighlightHtml = (item) => `
     <span class="highlight-card__target">${escapeHtml(tplDeps.classTargetSummary(item))}／${escapeHtml(item.day)}</span>
   </a></li>`;
 
+// ---- 会費システム（全教室共通） ----
+
+const feeTermsHtml = (terms) => `
+  <ol class="fee-terms" aria-label="4つの期">${terms.map((term) => `
+    <li><span class="fee-terms__label">${escapeHtml(term.label)}</span><span class="fee-terms__months">${escapeHtml(term.months)}</span></li>`).join('')}
+  </ol>`;
+
+// 見出しはページ側に置き、ここでは期の一覧と説明の定義リストを返す
+const feeSystemHtml = (feeSystem) => `
+  ${feeTermsHtml(feeSystem.terms)}
+  <dl class="fee-system__rows">${tplDeps.feeSystemRows(feeSystem).map(([label, value]) =>
+    `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>`;
+
 // ---- フォーム ----
 
 const classOptionsHtml = (classes, selectedId) =>
@@ -113,7 +127,7 @@ const errorSummaryText = (count) =>
 
 if (typeof module === 'object' && module.exports) {
   module.exports = {
-    escapeHtml, newsListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml,
+    escapeHtml, newsListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml, feeSystemHtml,
     classOptionsHtml, inquiryTypeRadiosHtml, completionRows, completionTableHtml,
     resultCountText, errorSummaryText,
   };

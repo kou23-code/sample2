@@ -1,10 +1,12 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { AGE_GROUPS, CLASSES_DATA, classSession, classFee } = require('../js/data/classes-data.js');
+const {
+  AGE_GROUPS, CLASSES_DATA, FEE_SYSTEM, classSession, classFee, feeTerm,
+} = require('../js/data/classes-data.js');
 const {
   filterClassesByAge, findClassById, classDisplayName, ageLabels,
   formatYen, formatFee, formatCapacity, sessionHeading, classTargetSummary,
-  hasMultipleSessions, sessionRows, classMainRows, classFeeRows,
+  hasMultipleSessions, sessionRows, classMainRows, classFeeRows, feeTermsText, feeSystemRows,
 } = require('../js/lib/class-logic.js');
 
 const byId = (id) => findClassById(CLASSES_DATA, id);
@@ -104,6 +106,25 @@ test('複数クラスの教室はカード上段に対象・曜日のみ、ク�
 test('カード下段はどの教室も会費・会場のみ', () => {
   CLASSES_DATA.forEach((item) => assert.deepEqual(classFeeRows(item).map(([label]) => label), ['会費', '会場']));
   assert.equal(rowValue(classFeeRows(byId('gymnastics')), '会費'), '3,600円');
+});
+
+test('会費システムは4期・年会費1,000円', () => {
+  assert.deepEqual(FEE_SYSTEM.terms.map((t) => `${t.label}:${t.months}`), ['第1期:4〜6月', '第2期:7〜9月', '第3期:10〜12月', '第4期:1〜3月']);
+  assert.equal(FEE_SYSTEM.annualFee, 1000);
+  assert.equal(Object.isFrozen(FEE_SYSTEM.terms[0]), true);
+});
+
+test('期の月をつなげる', () => {
+  assert.equal(feeTermsText(FEE_SYSTEM.terms), '4〜6月、7〜9月、10〜12月、1〜3月');
+  assert.equal(feeTermsText([feeTerm('前期', '4〜9月')]), '4〜9月');
+});
+
+test('会費システムの表示行が指定の文言になる', () => {
+  assert.deepEqual(feeSystemRows(FEE_SYSTEM), [
+    ['実施期間', '年間を4期（4〜6月、7〜9月、10〜12月、1〜3月）に分けて実施'],
+    ['年会費', '1,000円（年度内1回のみ。複数教室を受講する場合も1回のみで可）'],
+    ['教室の会費', '各教室の会費は期ごとの支払いとなります。'],
+  ]);
 });
 
 test('抽出関数は元データを変更しない', () => {

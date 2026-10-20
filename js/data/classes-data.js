@@ -61,6 +61,18 @@ const CLASSES_DATA = Object.freeze([
   }),
 ]);
 
+// 全教室共通の会費システム（期の区切り・年会費・支払い方法）
+const feeTerm = (label, months) => Object.freeze({ label, months });
+
+const FEE_SYSTEM = Object.freeze({
+  terms: Object.freeze([
+    feeTerm('第1期', '4〜6月'), feeTerm('第2期', '7〜9月'), feeTerm('第3期', '10〜12月'), feeTerm('第4期', '1〜3月'),
+  ]),
+  annualFee: 1000,
+  annualFeeNote: '年度内1回のみ。複数教室を受講する場合も1回のみで可',
+  classFeeNote: '各教室の会費は期ごとの支払いとなります。',
+});
+
 if (typeof module === 'object' && module.exports) {
-  module.exports = { AGE_GROUPS, CLASSES_DATA, classSession, classFee };
+  module.exports = { AGE_GROUPS, CLASSES_DATA, FEE_SYSTEM, classSession, classFee, feeTerm };
 }

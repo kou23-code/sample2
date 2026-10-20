@@ -44,10 +44,20 @@ const classMainRows = (item) => [
 // 教室カード下段の [項目名, 値]（年会費は全教室共通の会費システムで案内する）
 const classFeeRows = (item) => [['会費', formatFee(item.fee)], ['会場', item.place]];
 
+// 期の月を「4〜6月、7〜9月、…」の形でつなぐ
+const feeTermsText = (terms) => terms.map((term) => term.months).join('、');
+
+// 会費システムの [項目名, 値]
+const feeSystemRows = (feeSystem) => [
+  ['実施期間', `年間を${feeSystem.terms.length}期（${feeTermsText(feeSystem.terms)}）に分けて実施`],
+  ['年会費', `${formatYen(feeSystem.annualFee)}（${feeSystem.annualFeeNote}）`],
+  ['教室の会費', feeSystem.classFeeNote],
+];
+
 if (typeof module === 'object' && module.exports) {
   module.exports = {
     filterClassesByAge, findClassById, classDisplayName, ageLabels,
     formatYen, formatFee, formatCapacity, sessionHeading, classTargetSummary,
-    hasMultipleSessions, sessionRows, classMainRows, classFeeRows,
+    hasMultipleSessions, sessionRows, classMainRows, classFeeRows, feeTermsText, feeSystemRows,
   };
 }

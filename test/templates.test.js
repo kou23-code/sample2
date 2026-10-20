@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { NEWS_CATEGORIES, NEWS_DATA } = require('../js/data/news-data.js');
-const { AGE_GROUPS, CLASSES_DATA } = require('../js/data/classes-data.js');
+const { AGE_GROUPS, CLASSES_DATA, FEE_SYSTEM } = require('../js/data/classes-data.js');
 const { INQUIRY_TYPES } = require('../js/lib/form-validate.js');
 const tpl = require('../js/lib/templates.js');
 
@@ -52,6 +52,14 @@ test('体操教室のカードは会費のみ表示し、個別の年会費は�
   const html = tpl.classCardHtml(CLASSES_DATA[3], AGE_GROUPS);
   assert.match(html, /<dt>会費<\/dt><dd>3,600円<\/dd>/);
   assert.equal(CLASSES_DATA.some((item) => tpl.classCardHtml(item, AGE_GROUPS).includes('年会費')), false);
+});
+
+test('会費システムは4期の一覧と3項目の説明を表示する', () => {
+  const html = tpl.feeSystemHtml(FEE_SYSTEM);
+  assert.equal((html.match(/<li>/g) ?? []).length, 4);
+  assert.match(html, /第1期<\/span><span class="fee-terms__months">4〜6月/);
+  assert.match(html, /<dt>年会費<\/dt><dd>1,000円（年度内1回のみ。複数教室を受講する場合も1回のみで可）<\/dd>/);
+  assert.match(html, /各教室の会費は期ごとの支払いとなります。/);
 });
 
 test('ハイライトのリンクは ./classes.html#ID 形式で、対象と曜日を表示', () => {
