@@ -60,18 +60,20 @@ const insuranceTitle = (insurance) => `${insurance.name}${insurance.optional ? '
 // 区分ごとの [区分, 料金]
 const insuranceRows = (insurance) => insurance.plans.map((plan) => [plan.label, formatYen(plan.amount)]);
 
-// 料金の幅（「800円〜2,000円」。1区分なら金額のみ）
-const insuranceRangeText = (insurance) => {
-  const amounts = insurance.plans.map((plan) => plan.amount);
+// 金額の配列から幅を作る（「800円〜2,000円」。すべて同額なら金額のみ）
+const yenRangeText = (amounts) => {
   const [min, max] = [Math.min(...amounts), Math.max(...amounts)];
   return min === max ? formatYen(min) : `${formatYen(min)}〜${formatYen(max)}`;
 };
+
+// 保険料の幅
+const insuranceRangeText = (insurance) => yenRangeText(insurance.plans.map((plan) => plan.amount));
 
 if (typeof module === 'object' && module.exports) {
   module.exports = {
     filterClassesByAge, findClassById, classDisplayName, ageLabels,
     formatYen, formatFee, formatCapacity, sessionHeading, classTargetSummary,
     hasMultipleSessions, sessionRows, classMainRows, classFeeRows, feeTermsText, feeSystemRows,
-    insuranceTitle, insuranceRows, insuranceRangeText,
+    insuranceTitle, insuranceRows, yenRangeText, insuranceRangeText,
   };
 }
