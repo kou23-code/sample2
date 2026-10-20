@@ -9,6 +9,8 @@ const DEFAULT_CONFIG = Object.freeze({
   access: '架空鉄道みどり線「さくら町駅」から徒歩約10分',
   venue: 'さくら町スポーツセンター（架空）',
   copyrightYear: '2026',
+  // フォーム送信先（外部フォームサービスのURL）。空の場合は送信せず完了表示のみ行う
+  formEndpoint: '',
 });
 
 if (typeof module === 'object' && module.exports) {
