@@ -32,7 +32,7 @@ test('絞り込みボタンは「すべて」を先頭に付け、選択中を a
 test('教室カードの申込リンクは .html まで明記し教室IDを渡す', () => {
   const html = tpl.classCardHtml(CLASSES_DATA[0], AGE_GROUPS);
   assert.match(html, /href="\.\/contact\.html\?type=trial&amp;class=track-kids"/);
-  assert.match(html, /陸上教室（小学生・基礎コース）/);
+  assert.match(html, /陸上教室①/);
 });
 
 test('ハイライトのリンクは ./classes.html#ID 形式', () => {
@@ -54,7 +54,7 @@ test('種別ラジオボタンを生成する', () => {
 test('送信内容の確認表示を作り、入力値はエスケープされる', () => {
   const values = { inquiryType: 'trial', classId: 'play', name: '<b>架空</b>', email: 'a@example.com', tel: '', message: '' };
   const rows = tpl.completionRows(values, CLASSES_DATA);
-  assert.deepEqual(rows[1], ['希望教室', 'うんどう遊び教室']);
+  assert.deepEqual(rows[1], ['希望教室', '運動あそび教室']);
   assert.deepEqual(rows[4], ['電話番号', '未入力']);
   assert.match(tpl.completionTableHtml(rows), /&lt;b&gt;架空&lt;\/b&gt;/);
 });
