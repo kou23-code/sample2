@@ -73,18 +73,8 @@
     <section class="section" aria-labelledby="fee-heading">
       <div class="container">
         <div class="section__header"><h2 id="fee-heading">会費について</h2></div>
-        <div class="fee-system">
-          <h3 class="fee-system__title">会費システム<span class="fee-system__badge">全教室共通</span></h3>
-          <div data-fee-system></div>
-        </div>
-        <table class="info-table">
-          <tbody>
-            <tr><th scope="row">教室の会費</th><td>1期あたり 3,600円〜7,000円（教室ごとの金額・回数は<a href="./classes.html">教室案内</a>をご覧ください）</td></tr>
-            <tr><th scope="row" data-insurance-title>スポーツ安全保険（任意）</th><td data-insurance></td></tr>
-            <tr><th scope="row">体験参加</th><td>各教室1回まで無料</td></tr>
-          </tbody>
-        </table>
-        <p class="note">※金額はすべて目安です。くわしくはお電話またはお問い合わせフォームでおたずねください。</p>
+        <!-- 会費システム・教室の会費・スポーツ安全保険・体験参加は app.js が共通テンプレートで描画する（教室案内と共通） -->
+        <div class="fee-info" data-fee-info></div>
       </div>
     </section>
 
