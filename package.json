@@ -1,0 +1,9 @@
+{
+  "name": "aozora-sports-club-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "総合型地域スポーツクラブのホームページ（サーバーレス静的サイト）",
+  "scripts": {
+    "test": "node --test"
+  }
+}
