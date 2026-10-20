@@ -34,6 +34,11 @@ test('ブラウザ環境でも会費システムを組み立てられる', () =>
   assert.match(vm.runInContext('feeSystemHtml(FEE_SYSTEM)', context), /年間を4期/);
 });
 
+test('ブラウザ環境でもスポーツ安全保険の料金表を組み立てられる', () => {
+  const context = loadScripts('');
+  assert.match(vm.runInContext('insuranceHtml(SPORTS_INSURANCE)', context), /65歳以上<\/th><td>1,200円/);
+});
+
 test('config.js 未配置ならダミー設定を使う', () => {
   const context = loadScripts('');
   assert.equal(vm.runInContext('resolveSiteConfig().clubName', context), 'あおぞら総合型地域スポーツクラブ');

@@ -220,6 +220,27 @@ p { margin: 0 0 1em; }
   .fee-system__rows div { grid-template-columns: 1fr; gap: 0; }
 }
 
+/* ---------- スポーツ安全保険（開閉式・控えめな料金表） ---------- */
+
+.insurance summary {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 44px;
+  cursor: pointer; list-style: none; border-radius: var(--radius-small);
+}
+.insurance summary::-webkit-details-marker { display: none; }
+.insurance__range { font-weight: 700; }
+.insurance__toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--color-primary); text-decoration: underline; text-underline-offset: 0.2em; }
+.insurance__toggle::before { content: ""; width: 0; height: 0; border-style: solid; border-width: 5px 0 5px 8px; border-color: transparent transparent transparent currentColor; transition: transform 0.2s; }
+.insurance[open] .insurance__toggle::before { transform: rotate(90deg); }
+.insurance summary:hover .insurance__toggle { color: var(--color-primary-dark); }
+.mini-table { margin: 8px 0 4px; border-collapse: collapse; font-size: 0.95rem; min-width: min(100%, 260px); }
+.mini-table th, .mini-table td { padding: 4px 14px; border-bottom: 1px solid var(--color-border); text-align: left; font-weight: normal; }
+.mini-table thead th { font-size: 0.85rem; color: var(--color-muted); }
+.mini-table tbody td { text-align: right; font-weight: 700; }
+.insurance__note { margin: 4px 0 0; font-size: 0.85rem; color: var(--color-muted); }
+@media (prefers-reduced-motion: reduce) {
+  .insurance__toggle::before { transition: none; }
+}
+
 /* ---------- 電話・問い合わせ導線 ---------- */
 
 .contact-cta { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
@@ -241,9 +262,10 @@ p { margin: 0 0 1em; }
 /* ---------- クラブ概要 ---------- */
 
 .info-table { width: 100%; border-collapse: collapse; background: var(--color-surface); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
-.info-table th, .info-table td { padding: 14px 16px; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: top; }
-.info-table th { width: 30%; background: var(--color-primary-soft); color: var(--color-primary-dark); white-space: nowrap; }
-.info-table tr:last-child th, .info-table tr:last-child td { border-bottom: none; }
+/* 内側に入れる小さな表（.mini-table）に効かないよう、直下の行だけに限定する */
+.info-table > tbody > tr > th, .info-table > tbody > tr > td { padding: 14px 16px; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: top; }
+.info-table > tbody > tr > th { width: 30%; background: var(--color-primary-soft); color: var(--color-primary-dark); word-break: keep-all; }
+.info-table > tbody > tr:last-child > th, .info-table > tbody > tr:last-child > td { border-bottom: none; }
 
 .principles { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
 .principles li { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; border-left: 6px solid var(--color-green); }

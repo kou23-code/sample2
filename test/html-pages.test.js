@@ -42,6 +42,10 @@ test('教室案内・クラブ概要に共通の会費システム表示枠が�
   ['classes.html', 'about.html'].forEach((page) => assert.match(readPage(page), /data-fee-system/, page));
 });
 
+test('クラブ概要にスポーツ安全保険の表示枠がある', () => {
+  assert.match(readPage('about.html'), /data-insurance-title>スポーツ安全保険（任意）<\/th><td data-insurance>/);
+});
+
 test('ファイル名・フォルダ名は半角英数字とハイフンのみ（拡張子のドットを除く）', () => {
   const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true })
     .filter((entry) => !entry.name.startsWith('.') && entry.name !== 'node_modules')

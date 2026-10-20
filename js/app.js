@@ -26,9 +26,16 @@ const markCurrentNav = (doc) =>
 const renderFeeSystem = (doc) =>
   doc.querySelectorAll('[data-fee-system]').forEach((el) => renderHtml(el, feeSystemHtml(FEE_SYSTEM)));
 
+// data-insurance を置いたページにスポーツ安全保険の開閉式料金表を表示する
+const renderSportsInsurance = (doc) => {
+  doc.querySelectorAll('[data-insurance-title]').forEach((el) => renderText(el, insuranceTitle(SPORTS_INSURANCE)));
+  doc.querySelectorAll('[data-insurance]').forEach((el) => renderHtml(el, insuranceHtml(SPORTS_INSURANCE)));
+};
+
 const applyCommon = (doc, config) => {
   applyConfigText(doc, config);
   renderFeeSystem(doc);
+  renderSportsInsurance(doc);
   applyTelLinks(doc, config);
   markCurrentNav(doc);
   doc.title = buildPageTitle(doc.body.dataset.pageTitle, config.clubName);
