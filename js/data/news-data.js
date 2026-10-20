@@ -19,8 +19,8 @@ const NEWS_DATA = Object.freeze([
   }),
   Object.freeze({
     id: 'n-2026-09-20', date: '2026-09-20', category: 'class',
-    title: '陸上教室（中高生）の練習時間が変わります',
-    body: '10月から土曜日の練習開始時間を9:30に変更します。',
+    title: '陸上教室②の練習時間が変わります',
+    body: '10月から火曜日コース・木曜日コースとも、練習時間を18:30〜19:30に変更します。',
   }),
   Object.freeze({
     id: 'n-2026-09-05', date: '2026-09-05', category: 'info',
@@ -29,7 +29,7 @@ const NEWS_DATA = Object.freeze([
   }),
   Object.freeze({
     id: 'n-2026-08-25', date: '2026-08-25', category: 'class',
-    title: 'うんどう遊び教室に新しい遊具が加わりました',
+    title: '運動あそび教室に新しい遊具が加わりました',
     body: 'やわらかいマットとトンネルで、楽しく体を動かせます。',
   }),
   Object.freeze({
