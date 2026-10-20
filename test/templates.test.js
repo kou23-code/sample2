@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { NEWS_CATEGORIES, NEWS_DATA } = require('../js/data/news-data.js');
-const { AGE_GROUPS, CLASSES_DATA, FEE_SYSTEM } = require('../js/data/classes-data.js');
+const { AGE_GROUPS, CLASSES_DATA, FEE_SYSTEM, SPORTS_INSURANCE } = require('../js/data/classes-data.js');
 const { INQUIRY_TYPES } = require('../js/lib/form-validate.js');
 const tpl = require('../js/lib/templates.js');
 
@@ -60,6 +60,20 @@ test('会費システムは4期の一覧と3項目の説明を表示する', () 
   assert.match(html, /第1期<\/span><span class="fee-terms__months">4〜6月/);
   assert.match(html, /<dt>年会費<\/dt><dd>1,000円（年度内1回のみ。複数教室を受講する場合も1回のみで可）<\/dd>/);
   assert.match(html, /各教室の会費は期ごとの支払いとなります。/);
+});
+
+test('スポーツ安全保険は details/summary の開閉式で、閉じた状態は料金の幅のみ', () => {
+  const html = tpl.insuranceHtml(SPORTS_INSURANCE);
+  assert.match(html, /^\s*<details class="insurance">/);
+  assert.equal(/<details[^>]*\sopen/.test(html), false);
+  assert.match(html, /<summary>[\s\S]*800円〜2,000円[\s\S]*<\/summary>/);
+});
+
+test('スポーツ安全保険の料金表に3区分が並ぶ', () => {
+  const html = tpl.insuranceHtml(SPORTS_INSURANCE);
+  assert.equal((html.match(/<tr><th scope="row">/g) ?? []).length, 3);
+  assert.match(html, /高校生以上<\/th><td>2,000円[\s\S]*中学生以下<\/th><td>800円[\s\S]*65歳以上<\/th><td>1,200円/);
+  assert.match(html, /ご加入は任意です/);
 });
 
 test('ハイライトのリンクは ./classes.html#ID 形式で、対象と曜日を表示', () => {

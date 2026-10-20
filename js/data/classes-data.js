@@ -73,6 +73,18 @@ const FEE_SYSTEM = Object.freeze({
   classFeeNote: '各教室の会費は期ごとの支払いとなります。',
 });
 
+// スポーツ安全保険（任意加入）の区分ごとの料金
+const insurancePlan = (label, amount) => Object.freeze({ label, amount });
+
+const SPORTS_INSURANCE = Object.freeze({
+  name: 'スポーツ安全保険',
+  optional: true,
+  plans: Object.freeze([insurancePlan('高校生以上', 2000), insurancePlan('中学生以下', 800), insurancePlan('65歳以上', 1200)]),
+  note: 'ご加入は任意です。補償内容など、くわしくはお問い合わせください。',
+});
+
 if (typeof module === 'object' && module.exports) {
-  module.exports = { AGE_GROUPS, CLASSES_DATA, FEE_SYSTEM, classSession, classFee, feeTerm };
+  module.exports = {
+    AGE_GROUPS, CLASSES_DATA, FEE_SYSTEM, SPORTS_INSURANCE, classSession, classFee, feeTerm, insurancePlan,
+  };
 }

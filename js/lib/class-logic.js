@@ -54,10 +54,24 @@ const feeSystemRows = (feeSystem) => [
   ['教室の会費', feeSystem.classFeeNote],
 ];
 
+// 保険名（任意加入なら「（任意）」を付ける）
+const insuranceTitle = (insurance) => `${insurance.name}${insurance.optional ? '（任意）' : ''}`;
+
+// 区分ごとの [区分, 料金]
+const insuranceRows = (insurance) => insurance.plans.map((plan) => [plan.label, formatYen(plan.amount)]);
+
+// 料金の幅（「800円〜2,000円」。1区分なら金額のみ）
+const insuranceRangeText = (insurance) => {
+  const amounts = insurance.plans.map((plan) => plan.amount);
+  const [min, max] = [Math.min(...amounts), Math.max(...amounts)];
+  return min === max ? formatYen(min) : `${formatYen(min)}〜${formatYen(max)}`;
+};
+
 if (typeof module === 'object' && module.exports) {
   module.exports = {
     filterClassesByAge, findClassById, classDisplayName, ageLabels,
     formatYen, formatFee, formatCapacity, sessionHeading, classTargetSummary,
     hasMultipleSessions, sessionRows, classMainRows, classFeeRows, feeTermsText, feeSystemRows,
+    insuranceTitle, insuranceRows, insuranceRangeText,
   };
 }

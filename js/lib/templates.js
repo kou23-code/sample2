@@ -6,7 +6,7 @@ const tplDeps = typeof module === 'object' && module.exports
   : {
     formatDateJa, categoryLabel, classDisplayName, ageLabels, inquiryTypeLabel,
     classMainRows, classFeeRows, sessionRows, sessionHeading, classTargetSummary, hasMultipleSessions,
-    feeSystemRows,
+    feeSystemRows, insuranceTitle, insuranceRows, insuranceRangeText,
   };
 
 const HTML_ESCAPES = Object.freeze({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' });
@@ -95,6 +95,23 @@ const feeSystemHtml = (feeSystem) => `
   <dl class="fee-system__rows">${tplDeps.feeSystemRows(feeSystem).map(([label, value]) =>
     `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>`;
 
+// ---- スポーツ安全保険（開閉式の小さな料金表） ----
+
+const insuranceTableHtml = (insurance) => `
+  <table class="mini-table">
+    <thead><tr><th scope="col">区分</th><th scope="col">料金</th></tr></thead>
+    <tbody>${tplDeps.insuranceRows(insurance).map(([label, price]) =>
+      `<tr><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(price)}</td></tr>`).join('')}</tbody>
+  </table>`;
+
+// 閉じた状態では料金の幅だけを見せ、開くと区分ごとの料金表を表示する
+const insuranceHtml = (insurance) => `
+  <details class="insurance">
+    <summary><span class="insurance__range">${escapeHtml(tplDeps.insuranceRangeText(insurance))}</span><span class="insurance__toggle">区分ごとの料金を見る</span></summary>
+    ${insuranceTableHtml(insurance)}
+    <p class="insurance__note">${escapeHtml(insurance.note)}</p>
+  </details>`;
+
 // ---- フォーム ----
 
 const classOptionsHtml = (classes, selectedId) =>
@@ -127,7 +144,7 @@ const errorSummaryText = (count) =>
 
 if (typeof module === 'object' && module.exports) {
   module.exports = {
-    escapeHtml, newsListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml, feeSystemHtml,
+    escapeHtml, newsListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml, feeSystemHtml, insuranceHtml,
     classOptionsHtml, inquiryTypeRadiosHtml, completionRows, completionTableHtml,
     resultCountText, errorSummaryText,
   };

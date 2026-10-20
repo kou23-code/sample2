@@ -1,12 +1,13 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  AGE_GROUPS, CLASSES_DATA, FEE_SYSTEM, classSession, classFee, feeTerm,
+  AGE_GROUPS, CLASSES_DATA, FEE_SYSTEM, SPORTS_INSURANCE, classSession, classFee, feeTerm, insurancePlan,
 } = require('../js/data/classes-data.js');
 const {
   filterClassesByAge, findClassById, classDisplayName, ageLabels,
   formatYen, formatFee, formatCapacity, sessionHeading, classTargetSummary,
   hasMultipleSessions, sessionRows, classMainRows, classFeeRows, feeTermsText, feeSystemRows,
+  insuranceTitle, insuranceRows, insuranceRangeText,
 } = require('../js/lib/class-logic.js');
 
 const byId = (id) => findClassById(CLASSES_DATA, id);
@@ -125,6 +126,17 @@ test('会費システムの表示行が指定の文言になる', () => {
     ['年会費', '1,000円（年度内1回のみ。複数教室を受講する場合も1回のみで可）'],
     ['教室の会費', '各教室の会費は期ごとの支払いとなります。'],
   ]);
+});
+
+test('スポーツ安全保険は任意で、区分ごとの料金が指定どおり', () => {
+  assert.equal(insuranceTitle(SPORTS_INSURANCE), 'スポーツ安全保険（任意）');
+  assert.deepEqual(insuranceRows(SPORTS_INSURANCE), [['高校生以上', '2,000円'], ['中学生以下', '800円'], ['65歳以上', '1,200円']]);
+});
+
+test('保険料の幅を表示用にまとめる', () => {
+  assert.equal(insuranceRangeText(SPORTS_INSURANCE), '800円〜2,000円');
+  assert.equal(insuranceRangeText({ plans: [insurancePlan('一律', 500)] }), '500円');
+  assert.equal(insuranceTitle({ name: '保険A', optional: false }), '保険A');
 });
 
 test('抽出関数は元データを変更しない', () => {
