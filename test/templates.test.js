@@ -48,11 +48,10 @@ test('複数クラスの教室カードはクラスごとの時間・定員を�
   assert.match(html, /① 年少〜年長[\s\S]*17:00〜18:00[\s\S]*20名[\s\S]*② 小学生[\s\S]*18:15〜19:15[\s\S]*25名/);
 });
 
-test('体操教室のカードには年会費が表示される', () => {
+test('体操教室のカードは会費のみ表示し、個別の年会費は表示しない', () => {
   const html = tpl.classCardHtml(CLASSES_DATA[3], AGE_GROUPS);
   assert.match(html, /<dt>会費<\/dt><dd>3,600円<\/dd>/);
-  assert.match(html, /<dt>年会費<\/dt><dd>1,000円<\/dd>/);
-  assert.equal(tpl.classCardHtml(CLASSES_DATA[4], AGE_GROUPS).includes('年会費'), false);
+  assert.equal(CLASSES_DATA.some((item) => tpl.classCardHtml(item, AGE_GROUPS).includes('年会費')), false);
 });
 
 test('ハイライトのリンクは ./classes.html#ID 形式で、対象と曜日を表示', () => {

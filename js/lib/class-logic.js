@@ -41,12 +41,8 @@ const classMainRows = (item) => [
   ...(hasMultipleSessions(item) ? [] : sessionRows(item.sessions[0])),
 ];
 
-// 教室カード下段の [項目名, 値]（年会費は設定がある教室のみ）
-const classFeeRows = (item) => [
-  ['会費', formatFee(item.fee)],
-  ...(item.annualFee > 0 ? [['年会費', formatYen(item.annualFee)]] : []),
-  ['会場', item.place],
-];
+// 教室カード下段の [項目名, 値]（年会費は全教室共通の会費システムで案内する）
+const classFeeRows = (item) => [['会費', formatFee(item.fee)], ['会場', item.place]];
 
 if (typeof module === 'object' && module.exports) {
   module.exports = {

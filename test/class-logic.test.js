@@ -38,8 +38,8 @@ test('各教室の対象・曜日・時間・定員・会費が指定どおり',
   ]);
 });
 
-test('年会費は体操教室のみ1,000円', () => {
-  assert.deepEqual(CLASSES_DATA.filter((c) => c.annualFee > 0).map((c) => [c.id, c.annualFee]), [['gymnastics', 1000]]);
+test('教室データは個別の年会費を持たない（共通の会費システムに統合）', () => {
+  assert.equal(CLASSES_DATA.some((c) => 'annualFee' in c), false);
 });
 
 test('教室IDは重複しない', () => {
@@ -101,10 +101,9 @@ test('複数クラスの教室はカード上段に対象・曜日のみ、ク�
   ]);
 });
 
-test('カード下段は会費・会場で、年会費は該当教室のみ', () => {
-  assert.deepEqual(classFeeRows(byId('gymnastics')).map(([label]) => label), ['会費', '年会費', '会場']);
-  assert.equal(rowValue(classFeeRows(byId('gymnastics')), '年会費'), '1,000円');
-  assert.deepEqual(classFeeRows(byId('table-tennis')).map(([label]) => label), ['会費', '会場']);
+test('カード下段はどの教室も会費・会場のみ', () => {
+  CLASSES_DATA.forEach((item) => assert.deepEqual(classFeeRows(item).map(([label]) => label), ['会費', '会場']));
+  assert.equal(rowValue(classFeeRows(byId('gymnastics')), '会費'), '3,600円');
 });
 
 test('抽出関数は元データを変更しない', () => {
