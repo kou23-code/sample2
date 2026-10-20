@@ -129,8 +129,8 @@
 - 概要表（名称・設立・活動拠点・所在地・会員数・教室数・電話）、理念3項目、会費について（共通の会費システム＋教室の会費・スポーツ安全保険（任意）・体験参加の表）、アクセス表。
 - スポーツ安全保険（任意）：表のセル内に `<details>`/`<summary>` の開閉式で表示する。閉じた状態では料金の幅（`800円〜2,000円`）と「区分ごとの料金を見る」だけを見せ、開くと小さな料金表（高校生以上 2,000円／中学生以下 800円／65歳以上 1,200円）と注記を表示する。
   - データ：`js/data/classes-data.js` の `SPORTS_INSURANCE`（`name`、`optional`、`plans`：`insurancePlan(label, amount)` の配列、`note`）。
-  - 抽出関数（`class-logic.js`）：`insuranceTitle`（任意なら「（任意）」付き）、`insuranceRows`（[区分, 料金]）、`insuranceRangeText`（最小〜最大。1区分なら金額のみ）。
-  - 描画：`data-insurance-title`（見出し）と `data-insurance`（開閉式の料金表）に `app.js` の `renderSportsInsurance` が反映する。
+  - 抽出関数（`class-logic.js`）：`insuranceTitle`（任意なら「（任意）」付き）、`insuranceRows`（[区分, 料金]）、`insuranceRangeText`（最小〜最大。1区分なら金額のみ。内部で `yenRangeText` を使用）。
+- 「会費について」ブロックは教室案内と共通（5.5.1 参照）。
 - 地図は外部サービスを埋め込まず、準備中の表示とする（実在住所の露出と外部通信を避けるため）。
 
 ### 5.4 お知らせ（news.html）
@@ -167,8 +167,8 @@
 - 年間を4期（第1期 4〜6月、第2期 7〜9月、第3期 10〜12月、第4期 1〜3月）に分けて実施する。
 - 年会費は1,000円で年度内1回のみ（複数教室を受講する場合も1回のみで可）。
 - 各教室の会費は期ごとの支払いとなる。
-- データは `js/data/classes-data.js` の `FEE_SYSTEM`（`terms`：`feeTerm(label, months)` の配列、`annualFee`、`annualFeeNote`、`classFeeNote`）に1か所だけ定義し、`data-fee-system` 属性を持つ要素へ `app.js` の `renderFeeSystem` が描画する。
-- 表示場所：教室案内（ページ見出しの直下、絞り込みより上）と、クラブ概要の「会費について」。
+- データは `js/data/classes-data.js` の `FEE_SYSTEM`（`terms`：`feeTerm(label, months)` の配列、`annualFee`、`annualFeeNote`、`classFeeNote`、`trialNote`、`disclaimer`）に1か所だけ定義する。
+- 表示場所：「会費について」ブロック（5.5.1）の中。教室案内では年代フィルタの直上、クラブ概要では理念とアクセスの間。
 
 #### 表示用の抽出関数（`js/lib/class-logic.js`）
 
@@ -186,6 +186,15 @@
 - 年代フィルタ：すべての年代／幼児／小学生／中高生／一般（大人）／シニア。複数年代の教室は該当する各年代で表示する。
 - `#教室ID` 付きで開いた場合は、描画後にその教室の位置まで移動する。
 - 会場・紹介文は架空のダミー値。
+
+### 5.5.1 「会費について」共通ブロック（about.html・classes.html）
+
+- 両ページとも、見出し `<h2 id="fee-heading">会費について</h2>` の下に `<div class="fee-info" data-fee-info></div>` を1つ置き、`app.js` の `renderFeeInfo` が `feeInfoHtml(CLASSES_DATA, FEE_SYSTEM, SPORTS_INSURANCE)` で同じ内容を描画する（HTMLはコピーせず、テンプレートを共通化）。
+- ブロックの構成（上から）：
+  1. 緑枠の「会費システム 全教室共通」（4期・実施期間・年会費・教室の会費）
+  2. 表：教室の会費（`1期あたり` + `classFeeRangeText` で教室データから計算した幅＋`./classes.html#class-list-heading` へのリンク）／スポーツ安全保険（任意）（開閉式の料金表）／体験参加（`trialNote`）
+  3. 注記（`disclaimer`）
+- 教室案内での配置：ページ見出し → 会費について → 年代フィルタ → 教室カード。PC表示でも余白が開きすぎないよう `.section.section--compact` / `.section.section--after-compact` で上下の余白を詰める。
 
 ### 5.6 お問い合わせ・体験申込（contact.html）
 
@@ -235,3 +244,4 @@
 | 2026-10-20 | 教室案内を更新（7教室の対象・曜日・時間・定員・会費、クラス別表示、年会費表示） |
 | 2026-10-20 | 全教室共通の会費システムを教室案内・クラブ概要に追加。陸上教室②の曜日を火曜日のみに修正。体操教室の個別年会費を廃止し共通ルールに統合 |
 | 2026-10-20 | クラブ概要の保険欄を「スポーツ安全保険（任意）」に改め、区分別料金を開閉式の小さな表で追加 |
+| 2026-10-20 | 「会費について」ブロック全体を共通テンプレート化し、教室案内の年代フィルタ直上にも配置 |
