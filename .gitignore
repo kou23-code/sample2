@@ -1,0 +1,10 @@
+# 依存パッケージ
+node_modules/
+
+# 実名・機密情報を含むローカル設定（コミット禁止）
+config.js
+local-config.js
+.env
+
+# ログ
+*.log
