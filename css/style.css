@@ -191,8 +191,56 @@ p { margin: 0 0 1em; }
 .class-card__details { margin: 0; display: grid; gap: 4px; padding: 12px 16px; background: var(--color-bg); border-radius: var(--radius-small); }
 .class-card__details div { display: grid; grid-template-columns: 3.5em 1fr; gap: 8px; }
 .class-card__details dt { font-weight: 700; color: var(--color-green); }
-.class-card__details dd { margin: 0; }
+.class-card__details dd { margin: 0; word-break: keep-all; }
+.class-card__details--fee { background: #fff8ec; }
+.class-card__details--fee dt { color: var(--color-accent-dark); }
+.class-card__details--session { padding: 0; background: none; }
+.class-card__sessions { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+.class-session { padding: 10px 14px; border: 2px solid var(--color-primary-soft); border-radius: var(--radius-small); }
+.class-session__title { margin: 0 0 4px; font-weight: 700; color: var(--color-primary-dark); }
 .class-card .button { margin-top: auto; }
+
+/* ---------- 会費システム（全教室共通） ---------- */
+
+/* PC用メディアクエリの .section の余白指定に負けないよう .section と組み合わせて詳細度を上げる */
+.section.section--compact { padding-bottom: 0; }
+.section.section--after-compact { padding-top: 32px; }
+.fee-system { margin-bottom: 20px; padding: 20px 24px; background: var(--color-surface); border: 3px solid var(--color-green); border-radius: var(--radius); box-shadow: var(--shadow); }
+.fee-system__title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; font-size: 1.25rem; color: var(--color-green); }
+.fee-system__badge { padding: 0 12px; border-radius: 999px; background: var(--color-green); color: #fff; font-size: 0.85rem; line-height: 1.9; }
+.fee-terms { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); }
+.fee-terms li { display: grid; text-align: center; padding: 8px; border-radius: var(--radius-small); background: var(--color-green-soft); line-height: 1.5; }
+.fee-terms__label { font-size: 0.9rem; font-weight: 700; color: var(--color-green); }
+.fee-terms__months { font-size: 1.15rem; font-weight: 700; }
+.fee-system__rows { margin: 0; display: grid; gap: 6px; }
+.fee-system__rows div { display: grid; grid-template-columns: 6em 1fr; gap: 12px; }
+.fee-system__rows dt { font-weight: 700; color: var(--color-green); }
+.fee-system__rows dd { margin: 0; }
+@media (max-width: 479px) {
+  .fee-system { padding: 16px; }
+  .fee-system__rows div { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* ---------- スポーツ安全保険（開閉式・控えめな料金表） ---------- */
+
+.insurance summary {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 44px;
+  cursor: pointer; list-style: none; border-radius: var(--radius-small);
+}
+.insurance summary::-webkit-details-marker { display: none; }
+.insurance__range { font-weight: 700; }
+.insurance__toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--color-primary); text-decoration: underline; text-underline-offset: 0.2em; }
+.insurance__toggle::before { content: ""; width: 0; height: 0; border-style: solid; border-width: 5px 0 5px 8px; border-color: transparent transparent transparent currentColor; transition: transform 0.2s; }
+.insurance[open] .insurance__toggle::before { transform: rotate(90deg); }
+.insurance summary:hover .insurance__toggle { color: var(--color-primary-dark); }
+.mini-table { margin: 8px 0 4px; border-collapse: collapse; font-size: 0.95rem; min-width: min(100%, 260px); }
+.mini-table th, .mini-table td { padding: 4px 14px; border-bottom: 1px solid var(--color-border); text-align: left; font-weight: normal; white-space: nowrap; }
+.mini-table thead th { font-size: 0.85rem; color: var(--color-muted); }
+.mini-table tbody td { text-align: right; font-weight: 700; }
+.insurance__note { margin: 4px 0 0; font-size: 0.85rem; color: var(--color-muted); }
+@media (prefers-reduced-motion: reduce) {
+  .insurance__toggle::before { transition: none; }
+}
 
 /* ---------- 電話・問い合わせ導線 ---------- */
 
@@ -215,9 +263,15 @@ p { margin: 0 0 1em; }
 /* ---------- クラブ概要 ---------- */
 
 .info-table { width: 100%; border-collapse: collapse; background: var(--color-surface); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
-.info-table th, .info-table td { padding: 14px 16px; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: top; }
-.info-table th { width: 30%; background: var(--color-primary-soft); color: var(--color-primary-dark); white-space: nowrap; }
-.info-table tr:last-child th, .info-table tr:last-child td { border-bottom: none; }
+/* 内側に入れる小さな表（.mini-table）に効かないよう、直下の行だけに限定する */
+.info-table > tbody > tr > th, .info-table > tbody > tr > td { padding: 14px 16px; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: top; }
+.info-table > tbody > tr > th { width: 30%; background: var(--color-primary-soft); color: var(--color-primary-dark); word-break: keep-all; }
+.info-table > tbody > tr:last-child > th, .info-table > tbody > tr:last-child > td { border-bottom: none; }
+/* 狭い画面では見出しと内容を縦に並べ、内容欄の幅を確保する */
+@media (max-width: 479px) {
+  .info-table > tbody > tr > th, .info-table > tbody > tr > td { display: block; width: auto; }
+  .info-table > tbody > tr > th { padding-bottom: 6px; border-bottom: none; }
+}
 
 .principles { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
 .principles li { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; border-left: 6px solid var(--color-green); }

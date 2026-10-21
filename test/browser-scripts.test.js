@@ -29,6 +29,22 @@ test('ブラウザ環境でもテンプレートが依存関数を参照でき�
   assert.match(vm.runInContext('newsListHtml(latestNews(NEWS_DATA, 1), NEWS_CATEGORIES)', context), /2026年10月15日/);
 });
 
+test('ブラウザ環境でも会費システムを組み立てられる', () => {
+  const context = loadScripts('');
+  assert.match(vm.runInContext('feeSystemHtml(FEE_SYSTEM)', context), /年間を4期/);
+});
+
+test('ブラウザ環境でもスポーツ安全保険の料金表を組み立てられる', () => {
+  const context = loadScripts('');
+  assert.match(vm.runInContext('insuranceHtml(SPORTS_INSURANCE)', context), /65歳以上<\/th><td>1,200円/);
+});
+
+test('ブラウザ環境でも「会費について」ブロック全体を組み立てられる', () => {
+  const context = loadScripts('');
+  const html = vm.runInContext('feeInfoHtml(CLASSES_DATA, FEE_SYSTEM, SPORTS_INSURANCE)', context);
+  assert.match(html, /全教室共通[\s\S]*1期あたり 3,600円〜7,000円[\s\S]*<details class="insurance">[\s\S]*各教室1回まで無料/);
+});
+
 test('config.js 未配置ならダミー設定を使う', () => {
   const context = loadScripts('');
   assert.equal(vm.runInContext('resolveSiteConfig().clubName', context), 'あおぞら総合型地域スポーツクラブ');

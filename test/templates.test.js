@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { NEWS_CATEGORIES, NEWS_DATA } = require('../js/data/news-data.js');
-const { AGE_GROUPS, CLASSES_DATA } = require('../js/data/classes-data.js');
+const { AGE_GROUPS, CLASSES_DATA, FEE_SYSTEM, SPORTS_INSURANCE } = require('../js/data/classes-data.js');
 const { INQUIRY_TYPES } = require('../js/lib/form-validate.js');
 const tpl = require('../js/lib/templates.js');
 
@@ -32,11 +32,71 @@ test('絞り込みボタンは「すべて」を先頭に付け、選択中を a
 test('教室カードの申込リンクは .html まで明記し教室IDを渡す', () => {
   const html = tpl.classCardHtml(CLASSES_DATA[0], AGE_GROUPS);
   assert.match(html, /href="\.\/contact\.html\?type=trial&amp;class=track-kids"/);
-  assert.match(html, /陸上教室（小学生・基礎コース）/);
+  assert.match(html, /陸上教室①/);
 });
 
-test('ハイライトのリンクは ./classes.html#ID 形式', () => {
-  assert.match(tpl.classHighlightHtml(CLASSES_DATA[4]), /href="\.\/classes\.html#table-tennis"/);
+test('1クラスの教室カードに対象・曜日・時間・定員・会費・会場が表示される', () => {
+  const html = tpl.classCardHtml(CLASSES_DATA[1], AGE_GROUPS);
+  ['小学3年生〜中学3年生', '火曜日', '18:30〜19:30', '各クラス40名', '7,000円／3ヶ月（全10回）']
+    .forEach((text) => assert.ok(html.includes(text), text));
+  assert.equal(html.includes('class-card__sessions'), false);
+});
+
+test('複数クラスの教室カードはクラスごとの時間・定員を表示する', () => {
+  const html = tpl.classCardHtml(CLASSES_DATA[2], AGE_GROUPS);
+  assert.equal((html.match(/class="class-session"/g) ?? []).length, 2);
+  assert.match(html, /① 年少〜年長[\s\S]*17:00〜18:00[\s\S]*20名[\s\S]*② 小学生[\s\S]*18:15〜19:15[\s\S]*25名/);
+});
+
+test('体操教室のカードは会費のみ表示し、個別の年会費は表示しない', () => {
+  const html = tpl.classCardHtml(CLASSES_DATA[3], AGE_GROUPS);
+  assert.match(html, /<dt>会費<\/dt><dd>3,600円<\/dd>/);
+  assert.equal(CLASSES_DATA.some((item) => tpl.classCardHtml(item, AGE_GROUPS).includes('年会費')), false);
+});
+
+test('会費システムは4期の一覧と3項目の説明を表示する', () => {
+  const html = tpl.feeSystemHtml(FEE_SYSTEM);
+  assert.equal((html.match(/<li>/g) ?? []).length, 4);
+  assert.match(html, /第1期<\/span><span class="fee-terms__months">4〜6月/);
+  assert.match(html, /<dt>年会費<\/dt><dd>1,000円（年度内1回のみ。複数教室を受講する場合も1回のみで可）<\/dd>/);
+  assert.match(html, /各教室の会費は期ごとの支払いとなります。/);
+});
+
+test('スポーツ安全保険は details/summary の開閉式で、閉じた状態は料金の幅のみ', () => {
+  const html = tpl.insuranceHtml(SPORTS_INSURANCE);
+  assert.match(html, /^\s*<details class="insurance">/);
+  assert.equal(/<details[^>]*\sopen/.test(html), false);
+  assert.match(html, /<summary>[\s\S]*800円〜2,000円[\s\S]*<\/summary>/);
+});
+
+test('スポーツ安全保険の料金表に3区分が並ぶ', () => {
+  const html = tpl.insuranceHtml(SPORTS_INSURANCE);
+  assert.equal((html.match(/<tr><th scope="row">/g) ?? []).length, 3);
+  assert.match(html, /高校生以上<\/th><td>2,000円[\s\S]*中学生以下<\/th><td>800円[\s\S]*65歳以上<\/th><td>1,200円/);
+  assert.match(html, /ご加入は任意です/);
+});
+
+test('「会費について」ブロックは会費システム・3行の表・注記をこの順で含む', () => {
+  const html = tpl.feeInfoHtml(CLASSES_DATA, FEE_SYSTEM, SPORTS_INSURANCE);
+  assert.match(html, /class="fee-system"[\s\S]*全教室共通[\s\S]*class="info-table"[\s\S]*class="note"/);
+  const positions = ['教室の会費', 'スポーツ安全保険（任意）', '体験参加'].map((head) => html.indexOf(`<th scope="row">${head}</th>`));
+  assert.equal(positions.every((pos) => pos > 0), true);
+  assert.deepEqual([...positions].sort((a, b) => a - b), positions);
+});
+
+test('「会費について」ブロックの各行の内容', () => {
+  const html = tpl.feeInfoHtml(CLASSES_DATA, FEE_SYSTEM, SPORTS_INSURANCE);
+  assert.match(html, /1期あたり 3,600円〜7,000円/);
+  assert.match(html, /href="\.\/classes\.html#class-list-heading"/);
+  assert.match(html, /<details class="insurance">[\s\S]*800円〜2,000円/);
+  assert.match(html, /<td>各教室1回まで無料<\/td>/);
+  assert.match(html, /※金額はすべて目安です。/);
+});
+
+test('ハイライトのリンクは ./classes.html#ID 形式で、対象と曜日を表示', () => {
+  const html = tpl.classHighlightHtml(CLASSES_DATA[4]);
+  assert.match(html, /href="\.\/classes\.html#table-tennis"/);
+  assert.match(html, /小学生〜大人／水曜日/);
 });
 
 test('教室の選択肢は7教室＋未選択で、指定IDが選択済みになる', () => {
@@ -54,7 +114,7 @@ test('種別ラジオボタンを生成する', () => {
 test('送信内容の確認表示を作り、入力値はエスケープされる', () => {
   const values = { inquiryType: 'trial', classId: 'play', name: '<b>架空</b>', email: 'a@example.com', tel: '', message: '' };
   const rows = tpl.completionRows(values, CLASSES_DATA);
-  assert.deepEqual(rows[1], ['希望教室', 'うんどう遊び教室']);
+  assert.deepEqual(rows[1], ['希望教室', '運動あそび教室']);
   assert.deepEqual(rows[4], ['電話番号', '未入力']);
   assert.match(tpl.completionTableHtml(rows), /&lt;b&gt;架空&lt;\/b&gt;/);
 });

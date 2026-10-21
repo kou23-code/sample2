@@ -3,7 +3,11 @@
 // ブラウザでは先に読み込んだ各スクリプトのグローバル関数、Node.js では require で取得する
 const tplDeps = typeof module === 'object' && module.exports
   ? { ...require('./news-logic.js'), ...require('./class-logic.js'), ...require('./form-validate.js') }
-  : { formatDateJa, categoryLabel, classDisplayName, ageLabels, inquiryTypeLabel };
+  : {
+    formatDateJa, categoryLabel, classDisplayName, ageLabels, inquiryTypeLabel,
+    classMainRows, classFeeRows, sessionRows, sessionHeading, classTargetSummary, hasMultipleSessions,
+    feeSystemRows, insuranceTitle, insuranceRows, insuranceRangeText, classFeeRangeText,
+  };
 
 const HTML_ESCAPES = Object.freeze({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' });
 
@@ -41,20 +45,28 @@ const filterButtonsHtml = (options, activeId, allLabel) =>
 const ageBadgesHtml = (ageGroups, ageIds) =>
   tplDeps.ageLabels(ageGroups, ageIds).map((label) => `<span class="badge badge--age">${escapeHtml(label)}</span>`).join('');
 
-const classDetailsHtml = (item) => `
-  <dl class="class-card__details">
-    <div><dt>対象</dt><dd>${escapeHtml(item.target)}</dd></div>
-    <div><dt>日時</dt><dd>${escapeHtml(item.schedule)}</dd></div>
-    <div><dt>会場</dt><dd>${escapeHtml(item.place)}</dd></div>
-    <div><dt>会費</dt><dd>${escapeHtml(item.fee)}（目安）</dd></div>
-  </dl>`;
+// [項目名, 値] の配列を定義リストにする
+const detailRowsHtml = (rows, modifier) => `
+  <dl class="class-card__details${modifier ? ` class-card__details--${modifier}` : ''}">${rows.map(([label, value]) =>
+    `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>`;
+
+const sessionHtml = (session) => `
+  <li class="class-session">
+    <p class="class-session__title">${escapeHtml(tplDeps.sessionHeading(session))}</p>
+    ${detailRowsHtml(tplDeps.sessionRows(session), 'session')}
+  </li>`;
+
+// 複数クラスに分かれる教室だけ、クラスごとの時間・定員を並べる
+const sessionsHtml = (item) =>
+  tplDeps.hasMultipleSessions(item)
+    ? `<ul class="class-card__sessions" aria-label="クラス別の時間・定員">${item.sessions.map(sessionHtml).join('')}</ul>` : '';
 
 const classCardHtml = (item, ageGroups) => `
   <article class="class-card" id="${escapeHtml(item.id)}">
     <h3 class="class-card__title"><span class="class-card__icon" aria-hidden="true">${escapeHtml(item.icon)}</span>${escapeHtml(tplDeps.classDisplayName(item))}</h3>
     <div class="class-card__ages">${ageBadgesHtml(ageGroups, item.ages)}</div>
     <p class="class-card__summary">${escapeHtml(item.summary)}</p>
-    ${classDetailsHtml(item)}
+    ${detailRowsHtml(tplDeps.classMainRows(item))}${sessionsHtml(item)}${detailRowsHtml(tplDeps.classFeeRows(item), 'fee')}
     <a class="button button--primary" href="./contact.html?type=trial&amp;class=${encodeURIComponent(item.id)}">この教室の体験を申し込む</a>
   </article>`;
 
@@ -67,8 +79,58 @@ const classHighlightHtml = (item) => `
   <li><a class="highlight-card" href="./classes.html#${encodeURIComponent(item.id)}">
     <span class="highlight-card__icon" aria-hidden="true">${escapeHtml(item.icon)}</span>
     <span class="highlight-card__name">${escapeHtml(tplDeps.classDisplayName(item))}</span>
-    <span class="highlight-card__target">${escapeHtml(item.target)}</span>
+    <span class="highlight-card__target">${escapeHtml(tplDeps.classTargetSummary(item))}／${escapeHtml(item.day)}</span>
   </a></li>`;
+
+// ---- 会費システム（全教室共通） ----
+
+const feeTermsHtml = (terms) => `
+  <ol class="fee-terms" aria-label="4つの期">${terms.map((term) => `
+    <li><span class="fee-terms__label">${escapeHtml(term.label)}</span><span class="fee-terms__months">${escapeHtml(term.months)}</span></li>`).join('')}
+  </ol>`;
+
+// 見出しはページ側に置き、ここでは期の一覧と説明の定義リストを返す
+const feeSystemHtml = (feeSystem) => `
+  ${feeTermsHtml(feeSystem.terms)}
+  <dl class="fee-system__rows">${tplDeps.feeSystemRows(feeSystem).map(([label, value]) =>
+    `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>`;
+
+// ---- スポーツ安全保険（開閉式の小さな料金表） ----
+
+const insuranceTableHtml = (insurance) => `
+  <table class="mini-table">
+    <thead><tr><th scope="col">区分</th><th scope="col">料金</th></tr></thead>
+    <tbody>${tplDeps.insuranceRows(insurance).map(([label, price]) =>
+      `<tr><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(price)}</td></tr>`).join('')}</tbody>
+  </table>`;
+
+// 閉じた状態では料金の幅だけを見せ、開くと区分ごとの料金表を表示する
+const insuranceHtml = (insurance) => `
+  <details class="insurance">
+    <summary><span class="insurance__range">${escapeHtml(tplDeps.insuranceRangeText(insurance))}</span><span class="insurance__toggle">区分ごとの料金を見る</span></summary>
+    ${insuranceTableHtml(insurance)}
+    <p class="insurance__note">${escapeHtml(insurance.note)}</p>
+  </details>`;
+
+// ---- 「会費について」ブロック全体（クラブ概要・教室案内で共通） ----
+
+const feeInfoTableHtml = (classes, feeSystem, insurance) => `
+  <table class="info-table">
+    <tbody>
+      <tr><th scope="row">教室の会費</th><td>1期あたり ${escapeHtml(tplDeps.classFeeRangeText(classes))}（教室ごとの金額・回数は<a href="./classes.html#class-list-heading">教室案内</a>をご覧ください）</td></tr>
+      <tr><th scope="row">${escapeHtml(tplDeps.insuranceTitle(insurance))}</th><td>${insuranceHtml(insurance)}</td></tr>
+      <tr><th scope="row">体験参加</th><td>${escapeHtml(feeSystem.trialNote)}</td></tr>
+    </tbody>
+  </table>`;
+
+// 見出し「会費について」はページ側に置き、その下の会費システム・表・注記を返す
+const feeInfoHtml = (classes, feeSystem, insurance) => `
+  <div class="fee-system">
+    <h3 class="fee-system__title">会費システム<span class="fee-system__badge">全教室共通</span></h3>
+    ${feeSystemHtml(feeSystem)}
+  </div>
+  ${feeInfoTableHtml(classes, feeSystem, insurance)}
+  <p class="note">${escapeHtml(feeSystem.disclaimer)}</p>`;
 
 // ---- フォーム ----
 
@@ -102,7 +164,7 @@ const errorSummaryText = (count) =>
 
 if (typeof module === 'object' && module.exports) {
   module.exports = {
-    escapeHtml, newsListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml,
+    escapeHtml, newsListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml, feeSystemHtml, insuranceHtml, feeInfoHtml,
     classOptionsHtml, inquiryTypeRadiosHtml, completionRows, completionTableHtml,
     resultCountText, errorSummaryText,
   };

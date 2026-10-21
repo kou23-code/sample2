@@ -22,8 +22,14 @@ const applyTelLinks = (doc, config) =>
 const markCurrentNav = (doc) =>
   doc.querySelectorAll(`[data-nav="${doc.body.dataset.page}"]`).forEach((el) => el.setAttribute('aria-current', 'page'));
 
+// data-fee-info を置いたページ（クラブ概要・教室案内）に「会費について」ブロックを表示する
+const renderFeeInfo = (doc) =>
+  doc.querySelectorAll('[data-fee-info]').forEach((el) =>
+    renderHtml(el, feeInfoHtml(CLASSES_DATA, FEE_SYSTEM, SPORTS_INSURANCE)));
+
 const applyCommon = (doc, config) => {
   applyConfigText(doc, config);
+  renderFeeInfo(doc);
   applyTelLinks(doc, config);
   markCurrentNav(doc);
   doc.title = buildPageTitle(doc.body.dataset.pageTitle, config.clubName);

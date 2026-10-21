@@ -38,6 +38,24 @@ PAGES.forEach((page) => {
   });
 });
 
+test('教室案内・クラブ概要に共通の「会費について」見出しと表示枠が1つずつある', () => {
+  ['classes.html', 'about.html'].forEach((page) => {
+    const html = readPage(page);
+    assert.equal((html.match(/data-fee-info/g) ?? []).length, 1, page);
+    assert.match(html, /<h2 id="fee-heading">会費について<\/h2>/, page);
+  });
+});
+
+test('教室案内では「会費について」が年代フィルタの直前にある', () => {
+  const html = readPage('classes.html');
+  assert.ok(html.indexOf('data-fee-info') < html.indexOf('id="class-filter"'));
+  assert.equal(/data-fee-info[\s\S]*class-card|class="filter"[\s\S]*data-fee-info/.test(html), false);
+});
+
+test('会費の旧い個別の表示枠は残っていない', () => {
+  ['classes.html', 'about.html'].forEach((page) => assert.doesNotMatch(readPage(page), /data-fee-system|data-insurance/, page));
+});
+
 test('ファイル名・フォルダ名は半角英数字とハイフンのみ（拡張子のドットを除く）', () => {
   const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true })
     .filter((entry) => !entry.name.startsWith('.') && entry.name !== 'node_modules')
