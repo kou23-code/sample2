@@ -16,6 +16,7 @@ const readPage = (page) => fs.readFileSync(path.join(ROOT, page), 'utf8');
 const attrValues = (html, attr) => [...html.matchAll(new RegExp(`${attr}="([^"]*)"`, 'g'))].map((m) => m[1]);
 const isExternal = (url) => /^(tel:|mailto:|https?:|#)/.test(url);
 const stripQuery = (url) => url.split(/[?#]/)[0];
+const scriptSrcs = (html) => [...html.matchAll(/<script src="([^"]*)"/g)].map((m) => m[1]);
 
 PAGES.forEach((page) => {
   test(`${page}：ページ内リンクは ./ で始まり .html 等の拡張子まで明記している`, () => {
@@ -34,7 +35,7 @@ PAGES.forEach((page) => {
   test(`${page}：5ページ分のメニューと決められた順のスクリプトを持つ`, () => {
     const html = readPage(page);
     assert.equal((html.match(/data-nav="/g) ?? []).length, 5);
-    assert.deepEqual(attrValues(html, 'src'), SCRIPTS);
+    assert.deepEqual(scriptSrcs(html), SCRIPTS);
   });
 });
 
