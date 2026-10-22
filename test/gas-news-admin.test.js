@@ -75,3 +75,45 @@ test('管理画面の一覧は空行を除き、下書き・予約公開も公�
   assert.deepEqual(list.map((item) => [item.id, item.category, item.published, item.status]),
     [['1', 'info', true, 'published'], ['2', 'event', false, 'notPublished'], ['3', 'recruit', true, 'future']]);
 });
+
+// ---- 添付ファイル・リクエスト・認証 ----
+
+const PDF_BASE64 = Buffer.from('%PDF-1.4 test').toString('base64');
+
+test('PDF・画像で Base64 が正しく10MB以下のファイルは誤りなし、ファイルが無ければ誤りなし', () => {
+  assert.deepEqual(call('adminFileErrors', { name: 'a.pdf', type: 'application/pdf', data: PDF_BASE64 }), []);
+  assert.deepEqual(call('adminFileErrors', { name: 'a.png', type: 'image/png', data: PDF_BASE64 }), []);
+  assert.deepEqual(vm.runInContext('adminFileErrors(undefined)', gas).length, 0);
+  assert.deepEqual(call('adminFileErrors', null), []);
+});
+
+test('種類違い・Base64 として読めない・10MB超のファイルは日本語の誤りを返す', () => {
+  assert.match(call('adminFileErrors', { type: 'text/html', data: PDF_BASE64 })[0], /PDF・JPEG・PNG・GIF・WebP/);
+  assert.match(call('adminFileErrors', { type: 'application/pdf', data: '<script>' })[0], /読み込めませんでした/);
+  const big = 'A'.repeat(Math.ceil((10 * 1024 * 1024 + 3) / 3) * 4);
+  assert.match(call('adminFileErrors', { type: 'application/pdf', data: big })[0], /10MB以下/);
+});
+
+test('Base64 から元のファイルの大きさを求める', () => {
+  ['', 'a', 'ab', 'abc', 'abcd'].forEach((text) =>
+    assert.equal(call('base64ByteLength', Buffer.from(text).toString('base64')), text.length, text));
+});
+
+test('ドライブのファイル名は日付を先頭に付け、使えない文字を _ にし、空なら attachment にする', () => {
+  assert.equal(call('adminFileName', '案内.pdf', '2026-10-22'), '2026-10-22_案内.pdf');
+  assert.equal(call('adminFileName', '../a:b*?.pdf', '2026-10-22'), '2026-10-22_.._a_b__.pdf');
+  assert.equal(call('adminFileName', '', '2026-10-22'), '2026-10-22_attachment');
+  assert.equal(call('adminFileName', 'あ'.repeat(150), '2026-10-22').length, 11 + 100);
+});
+
+test('リクエストの本文は JSON として読み、読めなければ null', () => {
+  assert.deepEqual(call('parseAdminRequest', '{"action":"list"}'), { action: 'list' });
+  assert.equal(call('parseAdminRequest', 'not json'), null);
+  assert.equal(vm.runInContext('parseAdminRequest(undefined)', gas), null);
+});
+
+test('パスワードは一致したときだけ通し、未設定（空）なら常に通さない', () => {
+  assert.equal(call('isAdminPasswordMatch', ' secret ', 'secret'), true);
+  assert.equal(call('isAdminPasswordMatch', 'wrong', 'secret'), false);
+  assert.equal(call('isAdminPasswordMatch', '', ''), false);
+});

@@ -71,3 +71,45 @@ const sheetRowToAdminEntry = (row, today) => Object.freeze({
 // 管理画面の一覧（空行を除く。並び順はサイト側で決める）
 const adminNewsList = (rows, today) =>
   Object.freeze(rows.filter((row) => !isBlankNewsRow(row)).map((row) => sheetRowToAdminEntry(row, today)));
+
+// ---- 添付ファイル（管理画面から Base64 で送られたもの） ----
+
+// 受け付けるファイルの種類（MIMEタイプ → 表示名）と大きさの上限
+const NEWS_ADMIN_FILE_TYPES = Object.freeze({
+  'application/pdf': 'PDF', 'image/jpeg': 'JPEG', 'image/png': 'PNG', 'image/gif': 'GIF', 'image/webp': 'WebP',
+});
+const NEWS_ADMIN_MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+const isBase64 = (text) => text.length > 0 && text.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(text);
+
+// Base64 の文字列から元のファイルの大きさ（バイト数）を求める
+const base64ByteLength = (base64) => Math.floor((base64.length * 3) / 4) - base64.match(/=*$/)[0].length;
+
+// 添付ファイル { name, type, data（Base64） } の誤り（ファイルが無ければ空配列）
+const adminFileErrors = (file) => {
+  if (file === undefined || file === null) return [];
+  const data = sheetText(file.data);
+  return [
+    NEWS_ADMIN_FILE_TYPES[sheetText(file.type)] ? '' : '添付ファイルは PDF・JPEG・PNG・GIF・WebP のいずれかにしてください',
+    isBase64(data) ? '' : '添付ファイルを読み込めませんでした。ファイルを選び直してください',
+    isBase64(data) && base64ByteLength(data) > NEWS_ADMIN_MAX_FILE_BYTES ? '添付ファイルは10MB以下にしてください' : '',
+  ].filter(Boolean);
+};
+
+// ドライブに保存するファイル名（先頭に日付を付け、ファイル名に使えない文字を _ にし、名前は100文字まで）
+const adminFileName = (name, date) =>
+  `${date}_${sheetText(name).replace(/[\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 100) || 'attachment'}`;
+
+// ---- リクエスト・認証 ----
+
+// 管理画面から届いた本文（JSON の文字列）を読む（読めなければ null）
+const parseAdminRequest = (text) => {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return null;
+  }
+};
+
+// パスワードの照合（スクリプト プロパティが未設定なら常に不一致）
+const isAdminPasswordMatch = (input, expected) => sheetText(expected) !== '' && sheetText(input) === sheetText(expected);
