@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
-const SOURCE_DIRS = ['js', 'test'];
+const SOURCE_DIRS = ['js', 'gas', 'test'];
 const MAX_FUNCTION_LINES = 10;
 
 const listJsFiles = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
@@ -16,7 +16,8 @@ const sourceFiles = SOURCE_DIRS.flatMap((dir) => listJsFiles(path.join(ROOT, dir
 
 // トップレベルの文ごとに分割する（閉じ括弧以外で始まるインデントなしの行で区切る）
 const topLevelBlocks = (source) => source.split(/\r?\n(?=[^\s})\]])/);
-const isFunctionBlock = (block) => /^const \w+ = (async )?(\([^)]*\)|\w+) =>/.test(block);
+// GAS の doGet など、function 宣言が必須の関数も対象にする
+const isFunctionBlock = (block) => /^(const \w+ = (async )?(\([^)]*\)|\w+) =>|function \w+\s*\()/.test(block);
 const countCodeLines = (block) => block.split(/\r?\n/).filter((line) => line.trim() !== '').length;
 
 sourceFiles.forEach((file) => {
