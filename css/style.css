@@ -21,10 +21,11 @@
   --color-error: #b42318;
   --color-error-soft: #fdecea;
   --color-focus: #f59e0b;
-  --radius: 14px;
-  --radius-small: 8px;
+  --radius: 22px;
+  --radius-small: 14px;
   --shadow: 0 6px 20px rgba(40, 90, 50, 0.09);
   --container: 1080px;
+  --font-round: "Zen Maru Gothic", "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Meiryo", sans-serif;
   --font-base: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Noto Sans JP", "Meiryo", sans-serif;
 }
 
@@ -55,7 +56,7 @@ a:hover { color: var(--color-primary-dark); }
 
 :focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; border-radius: 4px; }
 
-h1, h2, h3 { line-height: 1.4; margin: 0 0 0.6em; }
+h1, h2, h3 { line-height: 1.45; margin: 0 0 0.6em; font-family: var(--font-round); letter-spacing: 0.03em; }
 h1 { font-size: clamp(1.6rem, 5vw, 2.4rem); }
 h2 { font-size: clamp(1.35rem, 3.6vw, 1.8rem); }
 h3 { font-size: 1.15rem; }
@@ -131,19 +132,19 @@ p { margin: 0 0 1em; }
 
 /* ---------- セクション ---------- */
 
-.section { padding: 48px 0; }
+.section { padding: 56px 0; }
 .section--soft { background: var(--color-surface); }
-.section__header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 20px; }
+.section__header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 28px; }
 .section__header h2 { margin: 0; padding-left: 14px; border-left: 6px solid var(--color-green); }
 
-.card { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; }
+.card { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; }
 
-.grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
 
 /* ---------- お知らせ ---------- */
 
-.news-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.news-item { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; }
+.news-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.news-item { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 26px; }
 .news-item__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: var(--color-muted); font-size: 0.95rem; }
 .news-item__title { margin: 6px 0 4px; font-size: 1.1rem; }
 .news-item__body { margin: 0; color: var(--color-muted); }
@@ -160,7 +161,7 @@ p { margin: 0 0 1em; }
 
 /* ---------- 絞り込み ---------- */
 
-.filter { margin-bottom: 20px; }
+.filter { margin-bottom: 28px; }
 .filter__label { font-weight: 700; margin-bottom: 8px; }
 .filter__buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .filter-button {
@@ -173,10 +174,10 @@ p { margin: 0 0 1em; }
 
 /* ---------- 教室 ---------- */
 
-.highlight-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.highlight-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
 .highlight-card {
   display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 12px; align-items: center; height: 100%;
-  padding: 16px; background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 18px 20px; background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow);
   border: 2px solid transparent; text-decoration: none; color: var(--color-text);
 }
 .highlight-card:hover { border-color: var(--color-primary); color: var(--color-text); }
@@ -184,7 +185,7 @@ p { margin: 0 0 1em; }
 .highlight-card__name { font-weight: 700; line-height: 1.4; }
 .highlight-card__target { font-size: 0.9rem; color: var(--color-muted); }
 
-.class-card { display: flex; flex-direction: column; gap: 12px; background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; border-top: 6px solid var(--color-primary); scroll-margin-top: 16px; }
+.class-card { display: flex; flex-direction: column; gap: 12px; background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; border-top: 6px solid var(--color-primary); scroll-margin-top: 16px; }
 .class-card:target { outline: 3px solid var(--color-focus); }
 .class-card__title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.2rem; }
 .class-card__icon { font-size: 1.8rem; line-height: 1; }
@@ -246,8 +247,8 @@ p { margin: 0 0 1em; }
 
 /* ---------- 電話・問い合わせ導線 ---------- */
 
-.contact-cta { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
-.contact-cta__box { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px 24px; text-align: center; }
+.contact-cta { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+.contact-cta__box { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 32px 28px; text-align: center; }
 .contact-cta__box--tel { border: 3px solid var(--color-primary); }
 .contact-cta__box--form { border: 3px solid var(--color-accent); }
 .contact-cta__box .button { width: 100%; max-width: 360px; }
@@ -276,7 +277,7 @@ p { margin: 0 0 1em; }
 }
 
 .principles { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
-.principles li { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; border-left: 6px solid var(--color-green); }
+.principles li { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px 26px; border-left: 6px solid var(--color-green); }
 .principles strong { display: block; font-size: 1.1rem; color: var(--color-green); margin-bottom: 4px; }
 
 .note { font-size: 0.95rem; color: var(--color-muted); }
@@ -356,7 +357,7 @@ body { padding-bottom: 76px; }
   .mobile-cta { display: none; }
   body { padding-bottom: 0; }
   .hero { padding: 72px 0 80px; }
-  .section { padding: 64px 0; }
+  .section { padding: 80px 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
