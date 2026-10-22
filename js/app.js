@@ -15,10 +15,10 @@ const warnNewsProblems = (entries, source) => {
     console.warn(`${source}のお知らせ ${problem.number}件目「${problem.title}」の添付ファイルURL「${problem.url}」は https:// で始まるURLではないため、添付を表示しません`));
 };
 
-// 添付のプレビュー画像が読み込めない場合（非公開のドライブファイルなど）は枠ごと消し、ボタンだけを残す
+// 添付の画像が読み込めない場合（非公開のドライブファイルなど）は画像の枠ごと消し、「ファイルを開く」ボタンだけを残す
 // （画像の error イベントは親へ伝わらないため、document のキャプチャ段階で受け取る）
 const removeBrokenPreviews = (doc) =>
-  doc.addEventListener('error', (event) => event.target.closest?.('.news-attachment__preview')?.remove(), true);
+  doc.addEventListener('error', (event) => event.target.closest?.('.news-figure')?.remove(), true);
 
 // GAS の Webアプリから取得したお知らせの配列を返す（5秒で打ち切り。応答の形が違えば失敗扱い）
 const fetchNewsEntries = (url) => {
@@ -99,7 +99,7 @@ const setupFilter = (container, options, allLabel, onChange) => {
 // お知らせは取得が終わってから描画する（それまでは HTML の「読み込んでいます…」を表示）
 const initTopPage = (doc, config) => {
   loadNewsItems(config).then((news) =>
-    renderHtml(doc.getElementById('latest-news'), newsListHtml(latestNews(news, 3), NEWS_CATEGORIES)));
+    renderHtml(doc.getElementById('latest-news'), newsLinkListHtml(latestNews(news, 3), NEWS_CATEGORIES)));
   renderHtml(doc.getElementById('class-highlights'), CLASSES_DATA.map(classHighlightHtml).join(''));
 };
 
@@ -109,11 +109,21 @@ const renderNews = (doc, categoryId, news) => {
   renderText(doc.getElementById('news-count'), resultCountText(items.length, '件のお知らせ'));
 };
 
+// トップの最新お知らせから来たとき（news.html#news-…）は、そのお知らせを開いた状態で表示位置まで移動する
+const openNewsFromHash = (doc) => {
+  const hash = doc.defaultView.location.hash;
+  const target = hash && doc.getElementById(decodeURIComponent(hash.slice(1)));
+  if (!target) return undefined;
+  target.querySelectorAll('details').forEach((entry) => (entry.open = true));
+  return target.scrollIntoView({ block: 'start' });
+};
+
 // 取得中に押された絞り込みも、取得完了後に押された順で反映される
 const initNewsPage = (doc, config) => {
   const newsReady = loadNewsItems(config);
   setupFilter(doc.getElementById('news-filter'), NEWS_CATEGORIES, 'すべて', (id) =>
     newsReady.then((news) => renderNews(doc, id, news)));
+  newsReady.then(() => openNewsFromHash(doc));
 };
 
 const renderClasses = (doc, ageId) => {
