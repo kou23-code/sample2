@@ -3,6 +3,14 @@
 
 const CLASS_IDS = Object.freeze(CLASSES_DATA.map((item) => item.id));
 
+// 職員が書いたお知らせのうち、誤りのないものだけを表示に使う
+const NEWS_ITEMS = prepareNews(NEWS_DATA, NEWS_CATEGORIES);
+
+// 誤りのあるお知らせは表示せず、直し方をコンソールに出す
+const warnNewsProblems = () =>
+  findNewsProblems(NEWS_DATA, NEWS_CATEGORIES).forEach((problem) =>
+    console.warn(`お知らせ ${problem.number}件目「${problem.title}」を表示できません：${problem.errors.join('／')}`));
+
 // ダミー設定に config.js（SITE_CONFIG）があれば上書きした最終設定
 const resolveSiteConfig = () =>
   mergeConfig(DEFAULT_CONFIG, typeof SITE_CONFIG === 'object' ? SITE_CONFIG : undefined);
@@ -55,12 +63,12 @@ const setupFilter = (container, options, allLabel, onChange) => {
 // ---- 各ページ ----
 
 const initTopPage = (doc) => {
-  renderHtml(doc.getElementById('latest-news'), newsListHtml(latestNews(NEWS_DATA, 3), NEWS_CATEGORIES));
+  renderHtml(doc.getElementById('latest-news'), newsListHtml(latestNews(NEWS_ITEMS, 3), NEWS_CATEGORIES));
   renderHtml(doc.getElementById('class-highlights'), CLASSES_DATA.map(classHighlightHtml).join(''));
 };
 
 const renderNews = (doc, categoryId) => {
-  const items = sortNewsByDate(filterNewsByCategory(NEWS_DATA, categoryId));
+  const items = sortNewsByDate(filterNewsByCategory(NEWS_ITEMS, categoryId));
   renderHtml(doc.getElementById('news-list'), newsListHtml(items, NEWS_CATEGORIES));
   renderText(doc.getElementById('news-count'), resultCountText(items.length, '件のお知らせ'));
 };
@@ -149,6 +157,7 @@ const PAGE_INITIALIZERS = Object.freeze({
 const initSite = (doc) => {
   const config = resolveSiteConfig();
   applyCommon(doc, config);
+  warnNewsProblems();
   PAGE_INITIALIZERS[doc.body.dataset.page]?.(doc, config);
 };
 

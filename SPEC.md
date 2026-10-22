@@ -43,7 +43,7 @@
 │  ├─ data/news-data.js    お知らせ NEWS_DATA・カテゴリ NEWS_CATEGORIES
 │  ├─ data/classes-data.js 教室 CLASSES_DATA・年代 AGE_GROUPS
 │  ├─ lib/config-merge.js  設定マージ・tel リンク・タイトル生成（純粋関数）
-│  ├─ lib/news-logic.js    お知らせの並べ替え・絞り込み（純粋関数）
+│  ├─ lib/news-logic.js    お知らせの並べ替え・絞り込み・入力チェック（純粋関数）
 │  ├─ lib/class-logic.js   教室の絞り込み・検索・表示用データ抽出（純粋関数）
 │  ├─ lib/form-validate.js フォーム検証・URLクエリ解析（純粋関数）
 │  ├─ lib/templates.js     HTML文字列の生成・エスケープ（純粋関数）
@@ -141,6 +141,27 @@
 - カテゴリ：すべて／お知らせ（info）／イベント（event）／教室情報（class）／募集（recruit）。
 - ボタンで絞り込み、選択中のボタンを `aria-pressed="true"` で示す。件数を `aria-live` で読み上げる。
 - 該当なしの場合は「該当するお知らせはありません。」を表示する。
+
+#### データと更新方法（`js/data/news-data.js`）
+
+- 職員が更新しやすいよう、`NEWS_DATA` は `Object.freeze` や `id` を書かない、ふつうのオブジェクトの配列とする。1件は `{ date, category, title, body }`。並び順は自由（表示時に日付の新しい順に並べる）。
+- ファイルの先頭のコメントに、追加方法と各項目の書き方を記載する。
+
+| 項目 | 必須 | ルール |
+| --- | --- | --- |
+| `date` | 必須 | `YYYY-MM-DD` 形式の実在する日付（`2026-02-30` などは不可） |
+| `category` | 必須 | `NEWS_CATEGORIES` の ID（`info` / `event` / `class` / `recruit`） |
+| `title` | 必須 | 空白だけは不可 |
+| `body` | 任意 | 文字列（省略時は空文字として扱う） |
+
+#### 入力チェックと表示用への整形（`js/lib/news-logic.js`・純粋関数）
+
+- `isNewsDate`：日付の形式と実在を判定する。
+- `newsEntryErrors(entry, categories)`：1件の誤りを、直し方が分かる日本語メッセージの配列で返す（誤りがなければ空配列）。
+- `findNewsProblems(entries, categories)`：誤りのあるお知らせだけを `{ number（1始まり）, title, errors }` で返す。
+- `toNewsItem`：前後の空白を除いて凍結した表示用の1件を返す。`prepareNews`：誤りのないお知らせだけを整え、凍結した配列で返す。
+- `app.js` は `NEWS_ITEMS = prepareNews(NEWS_DATA, NEWS_CATEGORIES)` をトップ（最新3件）とお知らせ一覧に使う。誤りのあるお知らせは画面に出さず、起動時に `console.warn` で「n件目〈タイトル〉を表示できません：〈誤りの内容〉」を出す。
+- 単体テスト（`test/news-logic.test.js`）で `findNewsProblems(NEWS_DATA)` が空であることを確認するため、データの書き間違いは `npm test` でも見つかる。
 
 ### 5.5 教室案内（classes.html）
 
@@ -252,3 +273,4 @@
 | 2026-10-20 | クラブ概要の保険欄を「スポーツ安全保険（任意）」に改め、区分別料金を開閉式の小さな表で追加 |
 | 2026-10-20 | 「会費について」ブロック全体を共通テンプレート化し、教室案内の年代フィルタ直上にも配置 |
 | 2026-10-22 | デザインをグリーン系に刷新（配色・角丸・余白）、トップに仮メインビジュアル（Unsplash）を追加、各セクションにアイコンと装飾を追加。HTMLテストのスクリプト順検証を `<script>` タグに限定 |
+| 2026-10-22 | お知らせデータを freeze・id 不要の簡単な書き方に変更し、入力チェック（誤りは非表示＋警告＋テストで検出）を追加 |

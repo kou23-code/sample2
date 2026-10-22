@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { NEWS_CATEGORIES, NEWS_DATA } = require('../js/data/news-data.js');
 const {
   sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa,
+  isNewsDate, newsEntryErrors, findNewsProblems, toNewsItem, prepareNews,
 } = require('../js/lib/news-logic.js');
 
 const sample = [
@@ -46,4 +47,55 @@ test('日付を日本語表記に整形する', () => {
 test('お知らせデータのカテゴリはすべて定義済み', () => {
   const ids = NEWS_CATEGORIES.map((c) => c.id);
   assert.equal(NEWS_DATA.every((n) => ids.includes(n.category)), true);
+});
+
+const okEntry = { date: '2026-10-15', category: 'event', title: '体験会', body: '本文' };
+
+test('実在する YYYY-MM-DD 形式の日付だけを正しい日付とみなす', () => {
+  assert.equal(isNewsDate('2026-10-15'), true);
+  assert.equal(isNewsDate(' 2028-02-29 '), true);
+  ['2026-02-30', '2026-13-01', '2026/10/15', '2026-1-5', '', undefined, 20261015]
+    .forEach((value) => assert.equal(isNewsDate(value), false, String(value)));
+});
+
+test('正しいお知らせは誤りなし（body は省略可）', () => {
+  assert.deepEqual(newsEntryErrors(okEntry, NEWS_CATEGORIES), []);
+  assert.deepEqual(newsEntryErrors({ ...okEntry, body: undefined }, NEWS_CATEGORIES), []);
+});
+
+test('日付・カテゴリ・タイトル・本文の誤りをそれぞれ日本語で知らせる', () => {
+  const errors = newsEntryErrors({ date: '2026/10/15', category: 'evnt', title: ' ', body: 123 }, NEWS_CATEGORIES);
+  assert.equal(errors.length, 4);
+  assert.match(errors[0], /2026\/10\/15.*実在する日付/);
+  assert.match(errors[1], /evnt.*info \/ event \/ class \/ recruit/);
+  assert.match(errors[2], /title/);
+  assert.match(errors[3], /body/);
+});
+
+test('オブジェクトでない行は書き方の誤りとして知らせる', () => {
+  [null, 'text', ['2026-10-15']].forEach((entry) =>
+    assert.match(newsEntryErrors(entry, NEWS_CATEGORIES)[0], /\{ date, category, title, body \}/));
+});
+
+test('誤りのあるお知らせだけを番号とタイトル付きで返す', () => {
+  const problems = findNewsProblems([okEntry, { ...okEntry, date: '' }, null], NEWS_CATEGORIES);
+  assert.deepEqual(problems.map((p) => [p.number, p.title, p.errors.length]), [[2, '体験会', 1], [3, '', 1]]);
+});
+
+test('表示用データは前後の空白を除いて凍結し、body 省略時は空文字にする', () => {
+  const item = toNewsItem({ date: ' 2026-10-15 ', category: ' event ', title: ' 体験会 ' });
+  assert.deepEqual(item, { date: '2026-10-15', category: 'event', title: '体験会', body: '' });
+  assert.equal(Object.isFrozen(item), true);
+});
+
+test('誤りのあるお知らせを除いて表示用に整え、元の配列は変更しない', () => {
+  const entries = [okEntry, { ...okEntry, category: 'zzz' }];
+  const news = prepareNews(entries, NEWS_CATEGORIES);
+  assert.deepEqual(news.map((n) => n.title), ['体験会']);
+  assert.equal(Object.isFrozen(news), true);
+  assert.equal(entries.length, 2);
+});
+
+test('お知らせデータ（js/data/news-data.js）に入力の誤りがない', () => {
+  assert.deepEqual(findNewsProblems(NEWS_DATA, NEWS_CATEGORIES), []);
 });
