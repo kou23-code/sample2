@@ -202,3 +202,10 @@ test('追加時に入力した固定順位は H列に数値で書き、公開用
   assert.equal(rows.at(-1)[7], 1);
   assert.deepEqual(doGetJson(context).news.map((item) => [item.title, item.order]), [['公開中', null], ['教室のお休み', 1]]);
 });
+
+test('例外が起きたときは、原因を特定できるよう例外の種類とメッセージを detail として返す', () => {
+  const context = loadGas(copyRows());
+  vm.runInContext("DriveApp.createFolder = () => { throw new Error('Access denied: DriveApp.'); };", context);
+  const result = post(context, { action: 'create', password: 'secret', data: { ...newsInput, file: pdfFile } });
+  assert.deepEqual([result.ok, result.detail], [false, 'Error: Access denied: DriveApp.']);
+});

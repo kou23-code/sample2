@@ -65,6 +65,47 @@ const normalizeAdminResponse = (json) =>
     ? { ...json, errors: Array.isArray(json.errors) ? json.errors.map(String) : [] }
     : { ok: false, errors: ['サーバーからの応答を読み取れませんでした'] };
 
+// ---- エラーの原因を特定しやすくするための詳細 ----
+
+const ADMIN_DETAIL_MAX_CHARS = 300;
+
+// 失敗の結果（画面に出すメッセージと、原因調査用の詳細）
+const adminFailure = (message, detail) => Object.freeze({ ok: false, errors: [message], detail: String(detail ?? '') });
+
+// 応答本文の先頭（HTML のタグを除き、空白をまとめて300文字まで）。Google のエラーページの内容を知るため
+const responseSnippet = (text) =>
+  String(text ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, ADMIN_DETAIL_MAX_CHARS);
+
+// JSON として読めなければ undefined を返す
+const parseJsonText = (text) => {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return undefined;
+  }
+};
+
+// fetch の応答 { ok, status, text } を結果にする（HTTP エラー・JSON でない応答も原因が分かる形で返す）
+const parseAdminHttpResponse = ({ ok, status, text }) => {
+  if (!ok) return adminFailure(`サーバーがエラーを返しました（HTTP ${status}）`, responseSnippet(text));
+  const json = parseJsonText(text);
+  if (json === undefined) {
+    return adminFailure('サーバーの応答が JSON ではありませんでした（GAS のデプロイ設定・アクセスできるユーザーを確認してください）', responseSnippet(text));
+  }
+  return normalizeAdminResponse(json);
+};
+
+// fetch 自体の失敗（タイムアウト／CORS・ネットワーク・URL の誤りなど）を結果にする
+const describeFetchError = (error) => {
+  const detail = `${error?.name ?? 'Error'}: ${error?.message ?? String(error)}`;
+  if (error?.name === 'AbortError') return adminFailure('60秒たっても応答がないため中断しました。時間をおいてもう一度お試しください', detail);
+  if (error?.name === 'TypeError') return adminFailure('サーバーと通信できませんでした（インターネット接続・config.js の URL・CORS の可能性があります）', detail);
+  return adminFailure('通信中に予期しないエラーが発生しました', detail);
+};
+
+// 画面に出すメッセージ（詳細があれば最後に「詳細：…」を付ける）
+const adminErrorLines = (result) => [...result.errors, ...(result.detail ? [`詳細：${result.detail}`] : [])];
+
 // 日付入力欄の初期値（その端末の今日の日付を 'YYYY-MM-DD' にする）
 const dateInputValue = (date) =>
   [date.getFullYear(), date.getMonth() + 1, date.getDate()].map((n, i) => String(n).padStart(i === 0 ? 4 : 2, '0')).join('-');
@@ -99,5 +140,6 @@ if (typeof module === 'object' && module.exports) {
     ADMIN_UPLOAD_TYPES, ADMIN_UPLOAD_MAX_BYTES, ADMIN_STATUS_LABELS, uploadFileErrors, adminFormErrors, dataUrlBase64,
     adminNewsPayload, adminRequestBody, normalizeAdminResponse, dateInputValue, adminCategoryOptionsHtml, adminNewsTableHtml,
     adminTableNoticeHtml, ADMIN_TABLE_COLUMNS, ADMIN_ORDER_MAX,
+    adminFailure, responseSnippet, parseAdminHttpResponse, describeFetchError, adminErrorLines,
   };
 }

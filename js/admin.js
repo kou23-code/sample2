@@ -23,14 +23,21 @@ const writeAdminPassword = (password) => {
   }
 };
 
-// GAS に POST し、応答を { ok, errors, ... } にそろえて返す（通信の失敗やタイムアウトもエラーとして返す）
+// 失敗した操作を、原因の詳細とともに開発者ツールのコンソールに出す（結果はそのまま返す）
+const logAdminFailure = (action, result) => {
+  if (!result.ok) console.error(`[お知らせ管理] 「${action}」に失敗しました`, { errors: result.errors, detail: result.detail ?? '' });
+  return result;
+};
+
+// GAS に POST し、応答を { ok, errors, detail, ... } にそろえて返す
+// 応答は文字列で受け取り、HTTP エラー・JSON でない応答・通信の失敗（CORS・タイムアウトなど）を区別して詳細を残す
 const postAdmin = (endpoint, action, data) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ADMIN_FETCH_TIMEOUT_MS);
   return fetch(endpoint, { method: 'POST', body: adminRequestBody(action, readAdminPassword(), data), signal: controller.signal })
-    .then((response) => response.json())
-    .then(normalizeAdminResponse)
-    .catch(() => normalizeAdminResponse({ ok: false, errors: ['通信に失敗しました。インターネット接続を確認して、もう一度お試しください'] }))
+    .then((response) => response.text().then((text) => parseAdminHttpResponse({ ok: response.ok, status: response.status, text })))
+    .catch(describeFetchError)
+    .then((result) => logAdminFailure(action, result))
     .finally(() => clearTimeout(timer));
 };
 
@@ -71,7 +78,7 @@ const loadAdminList = (doc, endpoint) => {
   renderAdminRows(body, adminTableNoticeHtml('読み込んでいます…'));
   return postAdmin(endpoint, 'list').then((result) => {
     handleAuthFailure(doc, result);
-    renderAdminRows(body, result.ok ? adminNewsTableHtml(result.news ?? [], NEWS_CATEGORIES) : adminTableNoticeHtml(result.errors[0] ?? ''));
+    renderAdminRows(body, result.ok ? adminNewsTableHtml(result.news ?? [], NEWS_CATEGORIES) : adminTableNoticeHtml(adminErrorLines(result).join(' ')));
   });
 };
 
@@ -87,7 +94,7 @@ const handleAdminLogin = (event, doc, endpoint) => {
   form.querySelector('[type="submit"]').disabled = true;
   return postAdmin(endpoint, 'login').then((result) => {
     form.querySelector('[type="submit"]').disabled = false;
-    return result.ok ? enterAdmin(doc, endpoint, form) : logoutAdmin(doc, result.errors[0]);
+    return result.ok ? enterAdmin(doc, endpoint, form) : logoutAdmin(doc, adminErrorLines(result).join(' '));
   });
 };
 
@@ -108,18 +115,26 @@ const uploadPayload = (form) => {
 const finishCreate = (doc, endpoint, form, result) => {
   handleAuthFailure(doc, result);
   showAdminMessage(doc.getElementById('form-message'),
-    result.ok ? [`お知らせ（ID：${result.id}）を追加しました。サイトにはすぐ反映されます。`] : result.errors, result.ok ? 'success' : 'error');
+    result.ok ? [`お知らせ（ID：${result.id}）を追加しました。サイトにはすぐ反映されます。`] : adminErrorLines(result), result.ok ? 'success' : 'error');
   if (!result.ok) return undefined;
   resetNewsForm(doc, form);
   return loadAdminList(doc, endpoint);
 };
 
-// 添付ファイルを読み込んでから送信する（読み込みに失敗したら知らせる）
+// ファイルの読み込みや画面の更新で起きたエラーを、種類ごとの文言と詳細で知らせ、コンソールにも出す
+const reportSubmitError = (doc, error) => {
+  console.error('[お知らせ管理] 送信の処理中にエラーが発生しました', error);
+  const message = error?.name === 'NotReadableError' || error?.name === 'NotFoundError'
+    ? '添付ファイルを読み込めませんでした。ファイルを選び直してください' : '送信の処理中にエラーが発生しました';
+  return showAdminMessage(doc.getElementById('form-message'), adminErrorLines(adminFailure(message, `${error?.name}: ${error?.message}`)), 'error');
+};
+
+// 添付ファイルを読み込んでから送信する（失敗したら原因の詳細とともに知らせる）
 const submitNews = (doc, endpoint, form, values) => {
   setSubmitting(doc, form, true);
   return uploadPayload(form).then((file) => postAdmin(endpoint, 'create', adminNewsPayload(values, file)))
     .then((result) => finishCreate(doc, endpoint, form, result))
-    .catch(() => showAdminMessage(doc.getElementById('form-message'), ['添付ファイルを読み込めませんでした。ファイルを選び直してください'], 'error'))
+    .catch((error) => reportSubmitError(doc, error))
     .finally(() => setSubmitting(doc, form, false));
 };
 

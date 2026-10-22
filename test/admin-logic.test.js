@@ -95,3 +95,36 @@ test('一覧は固定順位があるものを先頭に並べ、順位の列に�
 test('案内の行は表の全列（6列）にまたがり、文字をエスケープする', () => {
   assert.equal(admin.adminTableNoticeHtml('<読み込み中>'), '<tr><td colspan="6" class="admin-table__empty">&lt;読み込み中&gt;</td></tr>');
 });
+
+// ---- エラーの原因の詳細 ----
+
+test('GAS が JSON を返したときは通常どおり読み、detail があれば残す', () => {
+  assert.deepEqual(admin.parseAdminHttpResponse({ ok: true, status: 200, text: '{"ok":true,"id":"3"}' }), { ok: true, id: '3', errors: [] });
+  const result = admin.parseAdminHttpResponse({ ok: true, status: 200, text: '{"ok":false,"errors":["処理中にエラー"],"detail":"Exception: 権限がありません"}' });
+  assert.deepEqual(admin.adminErrorLines(result), ['処理中にエラー', '詳細：Exception: 権限がありません']);
+});
+
+test('HTTP エラーは状態コードと、HTML のタグを除いた本文の先頭を詳細にする', () => {
+  const result = admin.parseAdminHttpResponse({ ok: false, status: 500, text: '<html><body><h1>Error</h1>\n<p>Script function not found: doPost</p></body></html>' });
+  assert.deepEqual(result, { ok: false, errors: ['サーバーがエラーを返しました（HTTP 500）'], detail: 'Error Script function not found: doPost' });
+});
+
+test('JSON でない応答（Google のログイン画面など）は、その旨と本文の先頭を詳細にする', () => {
+  const result = admin.parseAdminHttpResponse({ ok: true, status: 200, text: '<!doctype html><title>Google アカウント</title>' + 'x'.repeat(500) });
+  assert.match(result.errors[0], /JSON ではありませんでした/);
+  assert.equal(result.detail.length, 300);
+  assert.match(result.detail, /^Google アカウント/);
+});
+
+test('通信の失敗はタイムアウト・CORS やネットワーク・その他に分け、エラー名とメッセージを詳細にする', () => {
+  const abort = admin.describeFetchError(Object.assign(new Error('The operation was aborted.'), { name: 'AbortError' }));
+  const network = admin.describeFetchError(new TypeError('Failed to fetch'));
+  const other = admin.describeFetchError(new RangeError('x'));
+  assert.deepEqual([abort, network, other].map((r) => r.errors[0].slice(0, 6)), ['60秒たって', 'サーバーと通', '通信中に予期']);
+  assert.equal(network.detail, 'TypeError: Failed to fetch');
+});
+
+test('詳細が無いときは「詳細：」の行を付けない', () => {
+  assert.deepEqual(admin.adminErrorLines({ ok: false, errors: ['パスワードが違います'] }), ['パスワードが違います']);
+  assert.deepEqual(admin.adminErrorLines(admin.adminFailure('失敗', '')), ['失敗']);
+});

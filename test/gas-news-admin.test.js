@@ -130,3 +130,9 @@ test('管理画面の一覧は固定順位も返す（空欄は null）', () => 
   const rows = [['1', '2026-10-01', 'お知らせ', 'a', '', '', '公開', 2], ['2', '2026-10-01', 'お知らせ', 'b', '', '', '公開', '']];
   assert.deepEqual(call('adminNewsList', rows, '2026-10-22').map((item) => item.order), [2, null]);
 });
+
+test('例外の詳細は「種類: メッセージ」で、300文字までにする', () => {
+  assert.equal(vm.runInContext("adminErrorDetail(new TypeError('x is not a function'))", gas), 'TypeError: x is not a function');
+  assert.equal(vm.runInContext("adminErrorDetail(new Error('あ'.repeat(400))).length", gas), 300);
+  assert.equal(vm.runInContext("adminErrorDetail('文字列の例外')", gas), 'Error: 文字列の例外');
+});
