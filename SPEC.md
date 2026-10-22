@@ -176,18 +176,19 @@
 
 | 列 | 見出し | 内容 | JSON への出力 |
 | --- | --- | --- | --- |
-| A | 公開 | チェックボックス。チェックなしは下書き | 出力しない（絞り込みのみ） |
+| A | ID | お知らせの識別子（省略可） | `id`（文字列） |
 | B | 日付 | 日付（入力規則で日付のみ） | `date`（日本時間の `YYYY-MM-DD`） |
 | C | カテゴリ | プルダウン（お知らせ／イベント／教室情報／募集） | `category`（ID に変換） |
 | D | タイトル | 必須 | `title` |
 | E | 本文 | 省略可 | `body` |
-| F | メモ | 職員どうしの連絡用 | **出力しない** |
+| F | 添付ファイルURL | 画像・PDF 等の URL（省略可） | `attachmentUrl`（シートの値のまま。Googleドライブのプレビュー用 URL への変換はサイト側で行う） |
+| G | 公開フラグ | チェックボックス、または文字（`TRUE`／`公開`／`1`／`○`／`yes`） | 出力しない（絞り込みのみ） |
 
-- 公開条件：公開にチェックがあり、日付が今日（日本時間）以前の行のみ（未来の日付は予約公開）。
-- 応答：`{ updatedAt: ISO日時, news: [{ date, category, title, body }] }`。例外時は `{ error: 'お知らせを読み込めませんでした' }`。
-- GAS 側（`gas/news-sheet.js`・純粋関数）：`sheetText`、`sheetDateText`（Date→日本時間の日付、文字列はそのまま）、`sheetCategoryId`（日本語名→ID）、`isPublishedRow`、`sheetRowToEntry`、`newsRowsToEntries`、`newsResponse`。
-- GAS 側（`gas/news-api.js`・副作用）：`doGet`（JSON を返す）、`CacheService` で5分キャッシュ（3万文字超は保存しない）、`onEdit`（シート編集でキャッシュ削除）、`setupNewsSheet`（初回に見出し・チェックボックス・入力規則を作成）。GAS から呼ぶ `doGet` / `onEdit` / `setupNewsSheet` のみ `function` 宣言とする。
-- Webアプリの公開設定：実行するユーザー「自分」、アクセスできるユーザー「全員」。シート自体は職員のみに共有する。シートには個人情報を書かない運用とし、メモ列も外部に出さない。
+- 公開条件：公開フラグ（`isPublishedFlag`）が公開を示し、日付が今日（日本時間）以前の行のみ（未来の日付は予約公開）。
+- 応答：`{ updatedAt: ISO日時, news: [{ id, date, category, title, body, attachmentUrl }] }`。例外時は `{ error: 'お知らせを読み込めませんでした' }`。
+- GAS 側（`gas/news-sheet.js`・純粋関数）：`sheetText`、`sheetDateText`（Date→日本時間の日付、文字列はそのまま）、`sheetCategoryId`（日本語名→ID）、`isPublishedFlag`（公開フラグの判定）、`isPublishedRow`、`sheetRowToEntry`、`newsRowsToEntries`、`newsResponse`。
+- GAS 側（`gas/news-api.js`・副作用）：`doGet`（JSON を返す）、`CacheService` で5分キャッシュ（3万文字超は保存しない）、`onEdit`（シート編集でキャッシュ削除）、`setupNewsSheet`（新規シートのみ。見出し・入力規則・G列のチェックボックスを作成）。応答の形を変えたらキャッシュキーの版数を上げる（現在 `news-json-v2`）。GAS から呼ぶ `doGet` / `onEdit` / `setupNewsSheet` のみ `function` 宣言とする。
+- Webアプリの公開設定：実行するユーザー「自分」、アクセスできるユーザー「全員」。シート自体は職員のみに共有する。シートには個人情報を書かない運用とし、公開フラグ列は外部に出さない。添付ファイルも公開してよいものだけを置く。
 - サイト側（`js/lib/news-logic.js`・純粋関数）：`isNewsEndpoint`（`http(s)://` で始まる URL のみ true。`YOUR_GAS_WEB_APP_URL` などの仮の値は false）、`parseNewsResponse`（応答から `news` 配列を取り出す。形が違えば `null`）。
 - サイト側（`js/app.js`）：`loadNewsItems(config)` が Promise でお知らせを返す。
   - 取得先あり：`fetch`（5秒で `AbortController` により打ち切り）→ HTTP エラー・形式違い・通信失敗・タイムアウトはすべて予備データにフォールバックし、`console.warn` を出す。
@@ -293,7 +294,7 @@
   - `browser-scripts`：全スクリプトをブラウザと同じ順で1つの実行環境に読み込み、名前の衝突がないこと、`config.js` による上書き、お知らせ取得（偽の `fetch` で成功・HTTPエラー・形式違い・未設定）を検証
   - `html-pages`：リンクの `.html` 明記・リンク先の存在・スクリプト順・ファイル名規約
   - `code-rules`：関数10行以下・`let` / `var` 不使用（対象：`js/`・`gas/`・`test/`。GAS用の `function` 宣言も含む）
-  - `gas-news-sheet`：シートの行の変換（日本時間の日付・カテゴリ名・公開条件・メモ列の除外）
+  - `gas-news-sheet`：シートの行の変換（日本時間の日付・カテゴリ名・公開フラグの判定・公開条件・ID と添付ファイルURL の出力）
   - `gas-news-api`：偽の SpreadsheetApp・CacheService・ContentService 上で `doGet`・キャッシュ・`onEdit`・エラー時の JSON を検証
 - マージ直前：ヘッドレスChromeによる画面E2E確認を、変更箇所に対して1回だけ実行する。
 
@@ -310,3 +311,4 @@
 | 2026-10-22 | デザインをグリーン系に刷新（配色・角丸・余白）、トップに仮メインビジュアル（Unsplash）を追加、各セクションにアイコンと装飾を追加。HTMLテストのスクリプト順検証を `<script>` タグに限定 |
 | 2026-10-22 | お知らせデータを freeze・id 不要の簡単な書き方に変更し、入力チェック（誤りは非表示＋警告＋テストで検出）を追加 |
 | 2026-10-22 | お知らせをスプレッドシート＋GAS の Webアプリから fetch で取得する仕組みを追加（gas/ のスクリプト・設定手順書、予備データへのフォールバック、予約公開） |
+| 2026-10-22 | スプレッドシートの列構成を確定版（A:ID／B:日付／C:カテゴリ／D:タイトル／E:本文／F:添付ファイルURL／G:公開フラグ）に変更し、GAS の応答に `id`・`attachmentUrl` を追加 |

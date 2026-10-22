@@ -4,8 +4,9 @@
 // ※ doGet / onEdit / setupNewsSheet は GAS から呼び出すため function 宣言にしている。
 
 const NEWS_SHEET_NAME = 'news';
-const NEWS_SHEET_HEADERS = Object.freeze(['公開', '日付', 'カテゴリ', 'タイトル', '本文', 'メモ（公開されません）']);
-const NEWS_CACHE_KEY = 'news-json-v1';
+const NEWS_SHEET_HEADERS = Object.freeze(['ID', '日付', 'カテゴリ', 'タイトル', '本文', '添付ファイルURL', '公開フラグ']);
+// 応答の形を変えたときは末尾の版数を上げ、古い形のキャッシュを使わないようにする
+const NEWS_CACHE_KEY = 'news-json-v2';
 const NEWS_CACHE_SECONDS = 300;
 // CacheService は1件100KBまで。日本語は1文字3バイトのため、文字数で余裕をもって判定する
 const NEWS_CACHE_MAX_CHARS = 30000;
@@ -46,16 +47,17 @@ function onEdit() {
   CacheService.getScriptCache().remove(NEWS_CACHE_KEY);
 }
 
-// 公開のチェックボックス、日付とカテゴリの入力規則を設定する
+// 日付とカテゴリの入力規則、公開フラグのチェックボックスを設定する
 const applyNewsSheetRules = (sheet) => {
-  sheet.getRange('A2:A').insertCheckboxes();
+  sheet.getRange('G2:G').insertCheckboxes();
   sheet.getRange('B2:B').setNumberFormat('yyyy-mm-dd')
     .setDataValidation(SpreadsheetApp.newDataValidation().requireDate().build());
   sheet.getRange('C2:C').setDataValidation(
     SpreadsheetApp.newDataValidation().requireValueInList(Object.keys(NEWS_SHEET_CATEGORY_IDS)).build());
 };
 
-// 初回だけ GASエディタから実行し、シート「news」の見出し・チェックボックス・入力規則を用意する
+// 新しくシートを作るときだけ GASエディタから実行し、シート「news」の見出し・入力規則・チェックボックスを用意する
+// ※ 公開フラグを文字（「公開」など）で入力済みのシートでは実行しないこと（G列がチェックボックスに変わるため）
 function setupNewsSheet() {
   const book = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = book.getSheetByName(NEWS_SHEET_NAME) ?? book.insertSheet(NEWS_SHEET_NAME);

@@ -8,12 +8,13 @@ const vm = require('node:vm');
 const ROOT = path.join(__dirname, '..');
 const GAS_FILES = ['gas/news-sheet.js', 'gas/news-api.js'];
 
-const HEADER = ['公開', '日付', 'カテゴリ', 'タイトル', '本文', 'メモ（公開されません）'];
+const HEADER = ['ID', '日付', 'カテゴリ', 'タイトル', '本文', '添付ファイルURL', '公開フラグ'];
+const ATTACHMENT = 'https://drive.google.com/file/d/abc123/view';
 const ROWS = [
   HEADER,
-  [true, new Date('2026-10-14T15:00:00Z'), 'イベント', '公開中', '本文', '担当メモ'],
-  [false, new Date('2026-10-01T15:00:00Z'), 'お知らせ', '下書き', '', ''],
-  [true, new Date('2099-01-01T00:00:00Z'), '募集', '予約', '', ''],
+  ['n-001', new Date('2026-10-14T15:00:00Z'), 'イベント', '公開中', '本文', ATTACHMENT, true],
+  ['n-002', new Date('2026-10-01T15:00:00Z'), 'お知らせ', '下書き', '', '', false],
+  ['n-003', new Date('2099-01-01T00:00:00Z'), '募集', '予約', '', '', '公開'],
 ];
 
 // Map に保存する偽の CacheService
@@ -40,11 +41,13 @@ const loadGas = (sheetRows) => {
 
 const doGetJson = (context) => JSON.parse(vm.runInContext('doGet()', context).text);
 
-test('doGet は公開中で日付が来たお知らせだけを、メモ列を除いた JSON で返す', () => {
+test('doGet は公開中で日付が来たお知らせだけを、ID・添付ファイルURL付き・公開フラグなしの JSON で返す', () => {
   const context = loadGas(ROWS);
   const output = vm.runInContext('doGet()', context);
   assert.equal(output.type, 'json');
-  assert.deepEqual(JSON.parse(output.text).news, [{ date: '2026-10-15', category: 'event', title: '公開中', body: '本文' }]);
+  assert.deepEqual(JSON.parse(output.text).news, [
+    { id: 'n-001', date: '2026-10-15', category: 'event', title: '公開中', body: '本文', attachmentUrl: ATTACHMENT },
+  ]);
   assert.match(JSON.parse(output.text).updatedAt, /^\d{4}-\d{2}-\d{2}T/);
 });
 
@@ -66,6 +69,6 @@ test('シートの読み取りに失敗しても JSON のエラーを返す', ()
   assert.deepEqual(doGetJson(context), { error: 'お知らせを読み込めませんでした' });
 });
 
-test('シート初期設定の見出しはシート変換の列の並びと一致している', () => {
+test('シート初期設定の見出しは確定した7列（A:ID〜G:公開フラグ）と一致している', () => {
   assert.deepEqual([...vm.runInContext('NEWS_SHEET_HEADERS', loadGas(ROWS))], HEADER);
 });
