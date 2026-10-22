@@ -148,7 +148,9 @@ p { margin: 0 0 1em; }
   background: var(--color-surface); color: var(--color-primary-dark); font-weight: 700; font-size: 0.9rem; box-shadow: var(--shadow);
 }
 
-.page-header { padding: 32px 0 24px; background: linear-gradient(160deg, #e3f3d8 0%, #f4faee 100%); }
+.page-header { position: relative; overflow: hidden; padding: 36px 0 32px; background: linear-gradient(160deg, #e3f3d8 0%, #f4faee 100%); }
+.page-header::before { content: ""; position: absolute; width: 220px; height: 220px; right: -60px; top: -110px; border-radius: 50%; background: rgba(140, 198, 63, 0.22); pointer-events: none; }
+.page-header .container { position: relative; }
 .page-header h1 { margin-bottom: 0.3em; }
 .page-header p { margin: 0; color: var(--color-muted); }
 
@@ -157,7 +159,23 @@ p { margin: 0 0 1em; }
 .section { padding: 56px 0; }
 .section--soft { background: var(--color-surface); }
 .section__header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 28px; }
-.section__header h2 { margin: 0; padding-left: 14px; border-left: 6px solid var(--color-green); }
+.section__header h2 { display: flex; align-items: center; gap: 14px; margin: 0; }
+/* 見出しの左に丸いアイコンを付ける（装飾なので「/ ""」で読み上げ対象から外す） */
+.section__header h2::before {
+  content: "🌿"; content: "🌿" / "";
+  flex: none; display: grid; place-items: center; width: 2.2em; height: 2.2em; border-radius: 50%;
+  background: var(--color-green-soft); box-shadow: inset 0 0 0 2px var(--color-border); font-size: 0.8em; line-height: 1;
+}
+#news-heading::before { content: "📣"; content: "📣" / ""; }
+#classes-heading::before { content: "🏃"; content: "🏃" / ""; }
+#contact-heading::before, #form-heading::before { content: "✉️"; content: "✉️" / ""; }
+#outline-heading::before { content: "🏫"; content: "🏫" / ""; }
+#principle-heading::before { content: "🤝"; content: "🤝" / ""; }
+#fee-heading::before { content: "💴"; content: "💴" / ""; }
+#access-heading::before { content: "📍"; content: "📍" / ""; }
+/* 見出しの下に若草色の短いライン */
+.section__header { position: relative; padding-bottom: 14px; }
+.section__header::after { content: ""; position: absolute; left: 0; bottom: 0; width: 72px; height: 5px; border-radius: 999px; background: linear-gradient(90deg, var(--color-primary), var(--color-leaf)); }
 
 .card { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; }
 
@@ -166,18 +184,29 @@ p { margin: 0 0 1em; }
 /* ---------- お知らせ ---------- */
 
 .news-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
-.news-item { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 26px; }
+.news-item { position: relative; background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 26px 22px 32px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; }
+/* 左端に若草色の帯（カテゴリごとに色を変える） */
+.news-item::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 7px; background: var(--color-leaf); }
+.news-item:has(.badge--event)::before { background: #f59e5b; }
+.news-item:has(.badge--recruit)::before { background: #a98bd6; }
+.news-item:has(.badge--info)::before { background: var(--color-primary); }
+.news-item:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(40, 90, 50, 0.14); }
 .news-item__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: var(--color-muted); font-size: 0.95rem; }
 .news-item__title { margin: 6px 0 4px; font-size: 1.1rem; }
 .news-item__body { margin: 0; color: var(--color-muted); }
 .news-list--compact .news-item__body { display: none; }
 
-.badge { display: inline-block; padding: 0 10px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; line-height: 1.8; }
+.badge { display: inline-block; padding: 0 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; line-height: 1.8; }
 .badge--info { background: var(--color-primary-soft); color: var(--color-primary-dark); }
 .badge--event { background: #fff1e6; color: var(--color-accent-dark); }
 .badge--class { background: var(--color-green-soft); color: var(--color-green); }
 .badge--recruit { background: #f3ecfb; color: #5b3a8c; }
 .badge--age { background: var(--color-green-soft); color: var(--color-green); }
+/* お知らせのカテゴリに小さなアイコンを添える */
+.badge--info::before { content: "📢 "; content: "📢 " / ""; }
+.badge--event::before { content: "🎉 "; content: "🎉 " / ""; }
+.badge--class::before { content: "🌱 "; content: "🌱 " / ""; }
+.badge--recruit::before { content: "🙋 "; content: "🙋 " / ""; }
 
 .empty-message { padding: 24px; text-align: center; background: var(--color-surface); border-radius: var(--radius); color: var(--color-muted); list-style: none; }
 
@@ -202,15 +231,16 @@ p { margin: 0 0 1em; }
   padding: 18px 20px; background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow);
   border: 2px solid transparent; text-decoration: none; color: var(--color-text);
 }
-.highlight-card:hover { border-color: var(--color-primary); color: var(--color-text); }
-.highlight-card__icon { grid-row: 1 / 3; font-size: 2rem; line-height: 1; }
+.highlight-card { transition: transform 0.2s, border-color 0.2s; }
+.highlight-card:hover { border-color: var(--color-leaf); color: var(--color-text); transform: translateY(-2px); }
+.highlight-card__icon { grid-row: 1 / 3; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--color-green-soft); font-size: 1.8rem; line-height: 1; }
 .highlight-card__name { font-weight: 700; line-height: 1.4; }
 .highlight-card__target { font-size: 0.9rem; color: var(--color-muted); }
 
 .class-card { display: flex; flex-direction: column; gap: 12px; background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; border-top: 6px solid var(--color-primary); scroll-margin-top: 16px; }
 .class-card:target { outline: 3px solid var(--color-focus); }
 .class-card__title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.2rem; }
-.class-card__icon { font-size: 1.8rem; line-height: 1; }
+.class-card__icon { display: grid; place-items: center; flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--color-green-soft); font-size: 1.6rem; line-height: 1; }
 .class-card__ages { display: flex; flex-wrap: wrap; gap: 6px; }
 .class-card__summary { margin: 0; }
 .class-card__details { margin: 0; display: grid; gap: 4px; padding: 12px 16px; background: var(--color-bg); border-radius: var(--radius-small); }
@@ -274,6 +304,9 @@ p { margin: 0 0 1em; }
 .contact-cta__box--tel { border: 3px solid var(--color-primary); }
 .contact-cta__box--form { border: 3px solid var(--color-accent); }
 .contact-cta__box .button { width: 100%; max-width: 360px; }
+/* 問い合わせ手段ごとに大きめの丸アイコン */
+.contact-cta__box h3::before { content: "📞"; content: "📞" / ""; display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 50%; background: var(--color-green-soft); font-size: 1.8rem; line-height: 1; }
+.contact-cta__box--form h3::before { content: "💻"; content: "💻" / ""; background: #fff1e6; }
 
 .tel-panel { text-align: center; padding: 32px 20px; background: var(--color-surface); border: 4px solid var(--color-primary); border-radius: var(--radius); box-shadow: var(--shadow); }
 .tel-panel__label { font-weight: 700; color: var(--color-primary-dark); margin-bottom: 4px; }
@@ -299,8 +332,9 @@ p { margin: 0 0 1em; }
 }
 
 .principles { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
-.principles li { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px 26px; border-left: 6px solid var(--color-green); }
+.principles li { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px 26px; border-top: 6px solid var(--color-leaf); }
 .principles strong { display: block; font-size: 1.1rem; color: var(--color-green); margin-bottom: 4px; }
+.principles strong::before { content: "🍀 "; content: "🍀 " / ""; }
 
 .note { font-size: 0.95rem; color: var(--color-muted); }
 
@@ -385,6 +419,8 @@ body { padding-bottom: 76px; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  .news-item, .highlight-card { transition: none; }
+  .news-item:hover, .highlight-card:hover { transform: none; }
 }
 
 @media print {
