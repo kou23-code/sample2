@@ -8,7 +8,7 @@ const vm = require('node:vm');
 const ROOT = path.join(__dirname, '..');
 const GAS_FILES = ['gas/news-sheet.js', 'gas/news-admin.js', 'gas/news-api.js'];
 
-const HEADER = ['ID', '日付', 'カテゴリ', 'タイトル', '本文', '添付ファイルURL', '公開フラグ'];
+const HEADER = ['ID', '日付', 'カテゴリ', 'タイトル', '本文', '添付ファイルURL', '公開フラグ', '固定順位'];
 const ATTACHMENT = 'https://drive.google.com/file/d/abc123/view';
 const ROWS = [
   HEADER,
@@ -71,7 +71,7 @@ test('doGet は公開中で日付が来たお知らせだけを、ID・添付フ
   const output = vm.runInContext('doGet()', context);
   assert.equal(output.type, 'json');
   assert.deepEqual(JSON.parse(output.text).news, [
-    { id: 'n-001', date: '2026-10-15', category: 'event', title: '公開中', body: '本文', attachmentUrl: ATTACHMENT },
+    { id: 'n-001', date: '2026-10-15', category: 'event', title: '公開中', body: '本文', attachmentUrl: ATTACHMENT, order: null },
   ]);
   assert.match(JSON.parse(output.text).updatedAt, /^\d{4}-\d{2}-\d{2}T/);
 });
@@ -94,7 +94,7 @@ test('シートの読み取りに失敗しても JSON のエラーを返す', ()
   assert.deepEqual(doGetJson(context), { error: 'お知らせを読み込めませんでした' });
 });
 
-test('シート初期設定の見出しは確定した7列（A:ID〜G:公開フラグ）と一致している', () => {
+test('シート初期設定の見出しは8列（A:ID〜G:公開フラグ・H:固定順位）と一致している', () => {
   assert.deepEqual([...vm.runInContext('NEWS_SHEET_HEADERS', loadGas(ROWS))], HEADER);
 });
 
@@ -149,10 +149,10 @@ test('一覧は下書き・予約公開も含めて状態付きで返し、パ�
 test('追加すると自動採番した行をシートの末尾に書き、ロックをかけ、公開用キャッシュを消す', () => {
   const rows = copyRows();
   const context = loadGas(rows);
-  context.cache.set('news-json-v2', 'old');
+  context.cache.set('news-json-v3', 'old');
   assert.deepEqual(post(context, { action: 'create', password: 'secret', data: newsInput }), { ok: true, id: '1', attachmentUrl: '' });
-  assert.deepEqual([...rows.at(-1)], ['1', '2026-10-22', 'お知らせ', '教室のお休み', '本文', '', '公開']);
-  assert.deepEqual([context.record.locks, context.cache.has('news-json-v2')], [['wait', 'release'], false]);
+  assert.deepEqual([...rows.at(-1)], ['1', '2026-10-22', 'お知らせ', '教室のお休み', '本文', '', '公開', '']);
+  assert.deepEqual([context.record.locks, context.cache.has('news-json-v3')], [['wait', 'release'], false]);
 });
 
 test('添付ファイルはドライブの専用フォルダに保存し、全員閲覧可にした共有URLを F列に書く', () => {
@@ -193,4 +193,12 @@ test('書き込み中に例外が起きても JSON のエラーを返す', () =>
   vm.runInContext("LockService.getScriptLock = () => { throw new Error('ロック取得失敗'); };", context);
   const result = post(context, { action: 'create', password: 'secret', data: newsInput });
   assert.deepEqual([result.ok, /時間をおいて/.test(result.errors[0])], [false, true]);
+});
+
+test('追加時に入力した固定順位は H列に数値で書き、公開用の応答にも order として出す', () => {
+  const rows = copyRows();
+  const context = loadGas(rows);
+  post(context, { action: 'create', password: 'secret', data: { ...newsInput, order: '1' } });
+  assert.equal(rows.at(-1)[7], 1);
+  assert.deepEqual(doGetJson(context).news.map((item) => [item.title, item.order]), [['公開中', null], ['教室のお休み', 1]]);
 });

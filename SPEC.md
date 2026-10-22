@@ -134,7 +134,7 @@
   - メインビジュアル（仮）：PC表示では文章の右、スマホでは文章の下に写真を配置する。メイン写真（芝生でサッカーをする子どもたち）と丸型のサブ写真（芝生とボール）、「はじめての方も大歓迎」のタグで構成する。
   - 写真は Unsplash のダミー画像を外部URLで参照する仮素材。本番では自前の写真（`img/` 配下など）に差し替える。読み込めない場合（オフライン等）は緑のグラデーションが表示される。
   - 下端は芝生の丘をイメージした波形（CSSのSVG背景）で次のセクションへつなぐ。
-- 最新お知らせ：日付の新しい順に3件（`latestNews`）。一覧（`./news.html`）へのリンク。
+- 最新お知らせ：表示順（5.4「表示順」）で先頭から3件（`latestNews`）。一覧（`./news.html`）へのリンク。
 - 7教室ハイライト：全7教室をカード表示し、`./classes.html#教室ID` へリンク。
 - 問い合わせ導線：大きな電話番号（tel リンク）と受付時間、フォームへのボタン。
 
@@ -188,14 +188,15 @@
 | E | 本文 | 省略可 | `body` |
 | F | 添付ファイルURL | 画像・PDF 等の URL（省略可） | `attachmentUrl`（シートの値のまま。Googleドライブのプレビュー用 URL への変換はサイト側で行う） |
 | G | 公開フラグ | チェックボックス、または文字（`TRUE`／`公開`／`1`／`○`／`yes`） | 出力しない（絞り込みのみ） |
+| H | 固定順位 | 数値（省略可。入力規則で 1〜9999） | `order`（数値。空や数値でないものは `null`） |
 
 - 公開条件：公開フラグ（`isPublishedFlag`）が公開を示し、日付が今日（日本時間）以前の行のみ（未来の日付は予約公開）。
 - 日付：日付型のセルは日本時間の `YYYY-MM-DD` に、文字列のセル（`2026/10/20`・`2026.1.5`・`2026-1-5`・`2026年10月20日`）は `normalizeDateText` で `YYYY-MM-DD` にそろえる。それ以外の形は「日付が読めない」として公開しない。
 - 公開されない理由（`rowSkipReason`）：`notPublished`（公開フラグなし）／`invalidDate`（日付が読めない）／`future`（未来の日付）。
 - 診断モード：Webアプリの URL に `?debug=1` を付けると、お知らせの代わりに `{ sheetFound, headers, today, rowCount, published, notPublished, invalidDate, future, notPublishedFlagSamples, invalidDateSamples }`（シートが無い場合は `{ sheetFound: false, expectedSheetName, sheetNames }`）を返す。タイトル・本文・添付URLは含めず、キャッシュもしない（`newsRowDiagnostics`）。
-- 応答：`{ updatedAt: ISO日時, news: [{ id, date, category, title, body, attachmentUrl }] }`。例外時は `{ error: 'お知らせを読み込めませんでした' }`。
+- 応答：`{ updatedAt: ISO日時, news: [{ id, date, category, title, body, attachmentUrl, order }] }`。例外時は `{ error: 'お知らせを読み込めませんでした' }`。
 - GAS 側（`gas/news-sheet.js`・純粋関数）：`sheetText`、`sheetDateText`（Date→日本時間の日付、文字列はそのまま）、`sheetCategoryId`（日本語名→ID）、`isPublishedFlag`（公開フラグの判定）、`isPublishedRow`、`sheetRowToEntry`、`newsRowsToEntries`、`newsResponse`。
-- GAS 側（`gas/news-api.js`・副作用）：`doGet`（JSON を返す）、`CacheService` で5分キャッシュ（3万文字超は保存しない）、`onEdit`（シート編集でキャッシュ削除）、`setupNewsSheet`（新規シートのみ。見出し・入力規則・G列のチェックボックスを作成）。応答の形を変えたらキャッシュキーの版数を上げる（現在 `news-json-v2`）。GAS から呼ぶ `doGet` / `onEdit` / `setupNewsSheet` のみ `function` 宣言とする。
+- GAS 側（`gas/news-api.js`・副作用）：`doGet`（JSON を返す）、`CacheService` で5分キャッシュ（3万文字超は保存しない）、`onEdit`（シート編集でキャッシュ削除）、`setupNewsSheet`（新規シートのみ。見出し8列・入力規則・G列のチェックボックスを作成）。応答の形を変えたらキャッシュキーの版数を上げる（現在 `news-json-v3`）。GAS から呼ぶ `doGet` / `onEdit` / `setupNewsSheet` のみ `function` 宣言とする。
 - Webアプリの公開設定：実行するユーザー「自分」、アクセスできるユーザー「全員」。シート自体は職員のみに共有する。シートには個人情報を書かない運用とし、公開フラグ列は外部に出さない。添付ファイルも公開してよいものだけを置く。
 - サイト側（`js/lib/news-logic.js`・純粋関数）：`isNewsEndpoint`（`http(s)://` で始まる URL のみ true。`YOUR_GAS_WEB_APP_URL` などの仮の値は false）、`parseNewsResponse`（応答から `news` 配列を取り出す。形が違えば `null`）。
 - サイト側（`js/app.js`）：`loadNewsItems(config)` が Promise でお知らせを返す。
@@ -204,6 +205,12 @@
   - 取得が終わるまでは HTML の「お知らせを読み込んでいます…」を表示し、終わってから一度だけ描画する（予備データからの差し替えによる表示のちらつきを避ける）。
   - お知らせ一覧の絞り込みは、取得中に押された場合も取得完了後に押された順で反映する。
 - 表示する HTML は `templates.js` でエスケープするため、シートに HTML やスクリプトが書かれても実行されない。
+
+#### 表示順（固定順位 `order`）
+
+- 並べ方（`sortNewsForDisplay`・`compareNewsForDisplay`）：固定順位が数値のお知らせを先に小さい順（同じ順位どうしは日付の新しい順）、固定順位がないお知らせはその後ろに日付（B列）の新しい順。トップの最新3件・お知らせ一覧・管理画面の一覧で共通（カテゴリで絞り込んだ後も同じ並べ方）。
+- 固定順位の値（`newsOrder`／GAS は `sheetOrder`）：数値または数字だけの文字列なら数値、空や数値でないものは `null`。予備データ（`js/data/news-data.js`）でも `order` を省略可で指定できる。数値でない `order` は入力の誤りとして表示しない。
+- 管理画面からの追加では、1〜9999 の整数か空欄のみ受け付け（画面 `adminFormErrors`・GAS `adminInputErrors`）、H列に数値で書き込む。
 
 #### 添付ファイルの表示（`attachmentUrl`）
 
@@ -321,7 +328,7 @@
 | --- | --- | --- |
 | `login` | パスワードの確認のみ | `{ ok: true }` |
 | `list` | 下書き・予約公開を含む全件（`adminNewsList`。状態 `status`：published／notPublished／future／invalidDate） | `{ ok: true, news: [...] }` |
-| `create` | お知らせの追加（`data`：date・category・title・body・attachmentUrl・published・file） | `{ ok: true, id, attachmentUrl }` |
+| `create` | お知らせの追加（`data`：date・category・title・body・attachmentUrl・published・order・file） | `{ ok: true, id, attachmentUrl }` |
 
 - 追加の流れ（GAS）：入力チェック（`adminInputErrors`・`adminFileErrors`）→ `LockService` で排他 → 添付ファイルがあればドライブに保存 → ID を自動採番（`nextNewsId`：数字のIDの最大値＋1）→ シート末尾に追加（`adminInputToRow`。カテゴリは日本語名、公開フラグは「公開」／「非公開」、先頭が `= + - @` の文字は `'` を付けて数式の実行を防ぐ）→ 公開用キャッシュを削除してすぐサイトに反映。
 - 入力の上限：タイトル100文字（必須）、本文2000文字、添付URLは https で500文字まで。日付は実在する `YYYY-MM-DD`。画面側（`adminFormErrors`）でも確認するが、最終的な検証は GAS 側で必ず行う。
@@ -373,3 +380,4 @@
 | 2026-10-22 | お知らせに添付ファイルの画像プレビューと「添付ファイルを開く」ボタンを追加（Googleドライブの共有リンクはサムネイルURLに変換） |
 | 2026-10-22 | GAS で文字列の日付（`2026/10/20` 等）が未来と判定され公開されない不具合を修正。`?debug=1` の診断モードを追加 |
 | 2026-10-22 | お知らせ管理画面（admin.html）を追加：共通パスワード（スクリプト プロパティ）でログインし、お知らせの追加・一覧表示、添付ファイルのドライブ保存に対応 |
+| 2026-10-22 | スプレッドシートの H列に「固定順位」を追加し、数値があるお知らせを先に昇順、ないものを日付の新しい順で表示。管理画面に固定順位の入力欄と一覧の順位列を追加 |

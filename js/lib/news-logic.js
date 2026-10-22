@@ -7,8 +7,28 @@ const sortNewsByDate = (news) => [...news].sort((a, b) => b.date.localeCompare(a
 const filterNewsByCategory = (news, categoryId) =>
   !categoryId || categoryId === 'all' ? [...news] : news.filter((item) => item.category === categoryId);
 
-// 最新 n 件を返す
-const latestNews = (news, count) => sortNewsByDate(news).slice(0, Math.max(0, count));
+// ---- 表示順（固定順位） ----
+
+// 固定順位：数値（または数字だけの文字列）なら数値、空や数値でないものは null（日付順で表示）
+const newsOrder = (value) => {
+  const number = typeof value === 'number' ? value : newsText(value) === '' ? NaN : Number(newsText(value));
+  return Number.isFinite(number) ? number : null;
+};
+
+const hasNewsOrder = (item) => typeof item.order === 'number' && Number.isFinite(item.order);
+
+// 固定順位があるものを先に小さい順、ないものは後ろに日付の新しい順（同じ順位どうしも日付の新しい順）
+const compareNewsForDisplay = (a, b) => {
+  if (hasNewsOrder(a) !== hasNewsOrder(b)) return hasNewsOrder(a) ? -1 : 1;
+  if (hasNewsOrder(a) && a.order !== b.order) return a.order - b.order;
+  return b.date.localeCompare(a.date);
+};
+
+// 表示順に並べた新しい配列を返す（トップ・お知らせ一覧・管理画面で共通）
+const sortNewsForDisplay = (news) => [...news].sort(compareNewsForDisplay);
+
+// 表示順で先頭から n 件を返す
+const latestNews = (news, count) => sortNewsForDisplay(news).slice(0, Math.max(0, count));
 
 // カテゴリIDから表示名を引く（見つからなければIDをそのまま返す）
 const categoryLabel = (categories, categoryId) =>
@@ -35,6 +55,14 @@ const isNewsDate = (value) => {
 
 const isNewsObject = (entry) => typeof entry === 'object' && entry !== null && !Array.isArray(entry);
 
+const isEmptyNewsValue = (value) => value === undefined || value === null || value === '';
+
+// 省略できる項目（本文・固定順位）の誤り
+const newsOptionalErrors = (entry) => [
+  entry.body === undefined || typeof entry.body === 'string' ? '' : 'body（本文）は文字列にしてください',
+  isEmptyNewsValue(entry.order) || newsOrder(entry.order) !== null ? '' : `order（固定順位）「${entry.order}」は数値にしてください`,
+];
+
 // 1件分の誤りを、職員が直し方の分かる日本語のメッセージの配列で返す（誤りがなければ空配列）
 const newsEntryErrors = (entry, categories) => {
   if (!isNewsObject(entry)) return ['{ date, category, title, body } の形で書いてください'];
@@ -43,7 +71,7 @@ const newsEntryErrors = (entry, categories) => {
     isNewsDate(entry.date) ? '' : `date「${entry.date ?? ''}」は 2026-10-15 のような実在する日付にしてください`,
     ids.includes(newsText(entry.category)) ? '' : `category「${entry.category ?? ''}」は ${ids.join(' / ')} のいずれかにしてください`,
     newsText(entry.title) ? '' : 'title（タイトル）を入力してください',
-    entry.body === undefined || typeof entry.body === 'string' ? '' : 'body（本文）は文字列にしてください',
+    ...newsOptionalErrors(entry),
   ].filter(Boolean);
 };
 
@@ -83,7 +111,7 @@ const findAttachmentProblems = (entries) =>
     .map((entry, index) => ({ number: index + 1, title: newsText(entry?.title), url: newsText(entry?.attachmentUrl) }))
     .filter((problem) => problem.url !== '' && !isHttpsUrl(problem.url));
 
-// 表示用に、前後の空白を除いて凍結したお知らせを作る（id・body・attachmentUrl は省略可。使えない添付URLは空文字）
+// 表示用に、前後の空白を除いて凍結したお知らせを作る（id・body・attachmentUrl・order は省略可。使えない添付URLは空文字、固定順位なしは null）
 const toNewsItem = (entry) => Object.freeze({
   id: newsText(entry.id),
   date: newsText(entry.date),
@@ -91,6 +119,7 @@ const toNewsItem = (entry) => Object.freeze({
   title: newsText(entry.title),
   body: newsText(entry.body),
   attachmentUrl: isHttpsUrl(entry.attachmentUrl) ? newsText(entry.attachmentUrl) : '',
+  order: newsOrder(entry.order),
 });
 
 // ---- GAS の Webアプリからの取得 ----
@@ -107,7 +136,7 @@ const prepareNews = (entries, categories) =>
 
 if (typeof module === 'object' && module.exports) {
   module.exports = {
-    sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa,
+    sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa, newsOrder, sortNewsForDisplay,
     newsText, isNewsDate, newsEntryErrors, findNewsProblems, toNewsItem, prepareNews,
     isNewsEndpoint, parseNewsResponse,
     isHttpsUrl, driveFileId, attachmentPreviewSrc, newsAttachment, findAttachmentProblems,

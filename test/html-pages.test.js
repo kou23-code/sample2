@@ -85,9 +85,9 @@ test('公開ページのどこからも admin.html へリンクしない', () =>
   PAGES.forEach((page) => assert.doesNotMatch(readPage(page), /admin\.html/, page));
 });
 
-test('admin.html のフォームは日付・カテゴリ・タイトル・本文・ファイル・URL・公開の入力欄を持つ', () => {
+test('admin.html のフォームは日付・カテゴリ・タイトル・本文・ファイル・URL・固定順位・公開の入力欄を持つ', () => {
   const html = readPage('admin.html');
-  ['date', 'category', 'title', 'body', 'file', 'attachmentUrl', 'published', 'password'].forEach((name) =>
+  ['date', 'category', 'title', 'body', 'file', 'attachmentUrl', 'order', 'published', 'password'].forEach((name) =>
     assert.match(html, new RegExp(`name="${name}"`), name));
   assert.match(html, /type="file"[^>]*accept="application\/pdf,image\/jpeg,image\/png,image\/gif,image\/webp"/);
 });

@@ -39,7 +39,7 @@ test('FileReader の data URL から Base64 の部分だけを取り出す', () 
 
 test('送信データは前後の空白を除き、公開チェックを true/false にし、ファイルがあれば URL 入力より優先する', () => {
   assert.deepEqual(admin.adminNewsPayload(okValues, undefined),
-    { date: '2026-10-22', category: 'info', title: '教室のお休み', body: '本文', attachmentUrl: '', published: true });
+    { date: '2026-10-22', category: 'info', title: '教室のお休み', body: '本文', attachmentUrl: '', published: true, order: '' });
   const file = { name: 'a.pdf', type: 'application/pdf', data: 'JVBERi0=' };
   const payload = admin.adminNewsPayload({ ...okValues, attachmentUrl: 'https://x.example/a.pdf', published: undefined }, file);
   assert.deepEqual([payload.attachmentUrl, payload.published, payload.file], ['', false, file]);
@@ -59,7 +59,7 @@ test('日付入力欄の初期値はその端末の日付の YYYY-MM-DD', () => 
   assert.equal(admin.dateInputValue(new Date(2026, 0, 5)), '2026-01-05');
 });
 
-test('一覧は日付の新しい順で、状態・カテゴリ名・添付の有無を表示し、文字をエスケープする', () => {
+test('一覧は（固定順位がなければ）日付の新しい順で、状態・カテゴリ名・添付の有無を表示し、文字をエスケープする', () => {
   const list = [
     { id: '1', date: '2026-10-01', category: 'info', title: '<古い>', attachmentUrl: '', status: 'notPublished' },
     { id: '2', date: '2026-10-22', category: 'event', title: '新しい', attachmentUrl: 'https://x', status: 'published' },
@@ -72,4 +72,26 @@ test('一覧は日付の新しい順で、状態・カテゴリ名・添付の�
 test('一覧が空なら案内文、カテゴリの選択肢は全カテゴリ分を作る', () => {
   assert.match(admin.adminNewsTableHtml([], NEWS_CATEGORIES), /まだありません/);
   assert.equal((admin.adminCategoryOptionsHtml(NEWS_CATEGORIES).match(/<option /g) ?? []).length, 4);
+});
+// ---- 固定順位 ----
+
+test('固定順位は空欄か1〜9999の整数だけを受け付け、送信データに文字のまま含める', () => {
+  ['', '1', '9999'].forEach((order) => assert.deepEqual(admin.adminFormErrors({ ...okValues, order }, NEWS_CATEGORIES), [], order));
+  ['0', '10000', '1.5', 'abc'].forEach((order) =>
+    assert.match(admin.adminFormErrors({ ...okValues, order }, NEWS_CATEGORIES)[0], /固定順位は1〜9999の整数/, order));
+  assert.equal(admin.adminNewsPayload({ ...okValues, order: ' 2 ' }, undefined).order, '2');
+});
+
+test('一覧は固定順位があるものを先頭に並べ、順位の列に数値、ないものは — を表示する', () => {
+  const list = [
+    { id: '1', date: '2026-10-22', category: 'info', title: '新しい', attachmentUrl: '', status: 'published', order: null },
+    { id: '2', date: '2026-01-01', category: 'info', title: '固定', attachmentUrl: '', status: 'published', order: 1 },
+  ];
+  const html = admin.adminNewsTableHtml(list, NEWS_CATEGORIES);
+  assert.ok(html.indexOf('固定') < html.indexOf('新しい'));
+  assert.match(html, /公開中<\/span><\/td>\s*<td>1<\/td>[\s\S]*公開中<\/span><\/td>\s*<td><span aria-label="固定順位なし">—<\/span><\/td>/);
+});
+
+test('案内の行は表の全列（6列）にまたがり、文字をエスケープする', () => {
+  assert.equal(admin.adminTableNoticeHtml('<読み込み中>'), '<tr><td colspan="6" class="admin-table__empty">&lt;読み込み中&gt;</td></tr>');
 });

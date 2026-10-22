@@ -4,7 +4,11 @@
 // ブラウザでは先に読み込んだ各スクリプトのグローバル関数、Node.js では require で取得する
 const adminDeps = typeof module === 'object' && module.exports
   ? { ...require('./news-logic.js'), ...require('./templates.js') }
-  : { newsText, isNewsDate, isHttpsUrl, formatDateJa, categoryLabel, sortNewsByDate, escapeHtml };
+  : { newsText, isNewsDate, isHttpsUrl, formatDateJa, categoryLabel, sortNewsForDisplay, escapeHtml };
+
+// 一覧の表の列数（ID・日付・状態・順位・カテゴリ・タイトル）。読み込み中・空の行の colspan に使う
+const ADMIN_TABLE_COLUMNS = 6;
+const ADMIN_ORDER_MAX = 9999;
 
 // 送れる添付ファイルの種類と大きさ（GAS の NEWS_ADMIN_FILE_TYPES・NEWS_ADMIN_MAX_FILE_BYTES と同じ）
 const ADMIN_UPLOAD_TYPES = Object.freeze(['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp']);
@@ -21,6 +25,12 @@ const uploadFileErrors = (file) =>
     file.size <= ADMIN_UPLOAD_MAX_BYTES ? '' : '添付ファイルは10MB以下にしてください',
   ].filter(Boolean);
 
+// 固定順位は空欄（日付順）か、1〜9999 の整数
+const isAdminOrderInput = (value) => {
+  const text = adminDeps.newsText(value);
+  return text === '' || (/^\d+$/.test(text) && Number(text) >= 1 && Number(text) <= ADMIN_ORDER_MAX);
+};
+
 // フォームの値の誤り（GAS 側でも同じ内容を確認する）
 const adminFormErrors = (values, categories) => [
   adminDeps.isNewsDate(values.date) ? '' : '日付を選んでください',
@@ -28,6 +38,7 @@ const adminFormErrors = (values, categories) => [
   adminDeps.newsText(values.title) ? '' : 'タイトルを入力してください',
   adminDeps.newsText(values.attachmentUrl) === '' || adminDeps.isHttpsUrl(values.attachmentUrl)
     ? '' : '添付ファイルURLは https:// で始まるURLにしてください',
+  isAdminOrderInput(values.order) ? '' : `固定順位は1〜${ADMIN_ORDER_MAX}の整数で入力してください（空欄なら日付順）`,
 ].filter(Boolean);
 
 // FileReader の結果 "data:application/pdf;base64,xxxx" から Base64 の部分だけを取り出す
@@ -41,6 +52,7 @@ const adminNewsPayload = (values, file) => Object.freeze({
   body: adminDeps.newsText(values.body),
   attachmentUrl: file ? '' : adminDeps.newsText(values.attachmentUrl),
   published: values.published === 'on',
+  order: adminDeps.newsText(values.order),
   ...(file ? { file } : {}),
 });
 
@@ -67,19 +79,25 @@ const adminNewsRowHtml = (item, categories) => `
     <td>${adminDeps.escapeHtml(item.id)}</td>
     <td>${adminDeps.escapeHtml(adminDateText(item.date))}</td>
     <td><span class="status status--${adminDeps.escapeHtml(item.status)}">${adminDeps.escapeHtml(ADMIN_STATUS_LABELS[item.status] ?? item.status)}</span></td>
+    <td>${typeof item.order === 'number' ? adminDeps.escapeHtml(item.order) : '<span aria-label="固定順位なし">—</span>'}</td>
     <td>${adminDeps.escapeHtml(adminDeps.categoryLabel(categories, item.category))}</td>
     <td>${adminDeps.escapeHtml(item.title)}${item.attachmentUrl ? ' <span class="admin-clip" role="img" aria-label="添付あり">📎</span>' : ''}</td>
   </tr>`;
 
-// 管理画面の一覧（日付の新しい順。下書き・予約公開も含む）
+// 一覧の表の、全列にまたがる案内の行（読み込み中・空・エラー）
+const adminTableNoticeHtml = (message) =>
+  `<tr><td colspan="${ADMIN_TABLE_COLUMNS}" class="admin-table__empty">${adminDeps.escapeHtml(message)}</td></tr>`;
+
+// 管理画面の一覧（サイトと同じ表示順：固定順位があるものを先に、ほかは日付の新しい順。下書き・予約公開も含む）
 const adminNewsTableHtml = (list, categories) =>
   list.length === 0
-    ? '<tr><td colspan="5" class="admin-table__empty">お知らせはまだありません。</td></tr>'
-    : adminDeps.sortNewsByDate(list).map((item) => adminNewsRowHtml(item, categories)).join('');
+    ? adminTableNoticeHtml('お知らせはまだありません。')
+    : adminDeps.sortNewsForDisplay(list).map((item) => adminNewsRowHtml(item, categories)).join('');
 
 if (typeof module === 'object' && module.exports) {
   module.exports = {
     ADMIN_UPLOAD_TYPES, ADMIN_UPLOAD_MAX_BYTES, ADMIN_STATUS_LABELS, uploadFileErrors, adminFormErrors, dataUrlBase64,
     adminNewsPayload, adminRequestBody, normalizeAdminResponse, dateInputValue, adminCategoryOptionsHtml, adminNewsTableHtml,
+    adminTableNoticeHtml, ADMIN_TABLE_COLUMNS, ADMIN_ORDER_MAX,
   };
 }

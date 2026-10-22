@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { NEWS_CATEGORIES } = require('../js/data/news-data.js');
 const {
   NEWS_SHEET_CATEGORY_IDS, sheetText, sheetDateText, sheetCategoryId,
-  isPublishedFlag, rowSkipReason, isPublishedRow, sheetRowToEntry, newsRowsToEntries, newsResponse, newsRowDiagnostics,
+  sheetOrder, isPublishedFlag, rowSkipReason, isPublishedRow, sheetRowToEntry, newsRowsToEntries, newsResponse, newsRowDiagnostics,
 } = require('../gas/news-sheet.js');
 
 // 日本時間 2026-10-15 0:00 は UTC では前日 15:00
@@ -57,7 +57,7 @@ test('公開フラグがあり、日付が今日以前の行だけを公開対�
 test('1行を ID・添付ファイルURL を含むお知らせに変換し、公開フラグは含めない', () => {
   const url = 'https://drive.google.com/file/d/abc123/view?usp=sharing';
   const entry = sheetRowToEntry(row(' n-001 ', jstMidnight, 'イベント', ' 体験会 ', '本文', ` ${url} `, true));
-  assert.deepEqual(entry, { id: 'n-001', date: '2026-10-15', category: 'event', title: '体験会', body: '本文', attachmentUrl: url });
+  assert.deepEqual(entry, { id: 'n-001', date: '2026-10-15', category: 'event', title: '体験会', body: '本文', attachmentUrl: url, order: null });
   assert.equal(Object.isFrozen(entry), true);
 });
 
@@ -112,4 +112,10 @@ test('診断結果は件数と理由ごとの件数、認識できない値の�
     notPublishedFlagSamples: ['公開済み'], invalidDateSamples: ['10月1日'],
   });
   assert.doesNotMatch(JSON.stringify(result), /秘密/);
+});
+
+test('H列の固定順位は数値・数字の文字列なら数値、空や数値でなければ null にする', () => {
+  [[1, 1], ['2', 2], [' 3 ', 3]].forEach(([value, expected]) => assert.equal(sheetOrder(value), expected, String(value)));
+  [undefined, null, '', 'abc'].forEach((value) => assert.equal(sheetOrder(value), null, String(value)));
+  assert.equal(sheetRowToEntry([...row('n1', '2026-10-01', 'お知らせ', 'a', '', '', true), 4]).order, 4);
 });
