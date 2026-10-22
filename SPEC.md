@@ -185,6 +185,9 @@
 | G | 公開フラグ | チェックボックス、または文字（`TRUE`／`公開`／`1`／`○`／`yes`） | 出力しない（絞り込みのみ） |
 
 - 公開条件：公開フラグ（`isPublishedFlag`）が公開を示し、日付が今日（日本時間）以前の行のみ（未来の日付は予約公開）。
+- 日付：日付型のセルは日本時間の `YYYY-MM-DD` に、文字列のセル（`2026/10/20`・`2026.1.5`・`2026-1-5`・`2026年10月20日`）は `normalizeDateText` で `YYYY-MM-DD` にそろえる。それ以外の形は「日付が読めない」として公開しない。
+- 公開されない理由（`rowSkipReason`）：`notPublished`（公開フラグなし）／`invalidDate`（日付が読めない）／`future`（未来の日付）。
+- 診断モード：Webアプリの URL に `?debug=1` を付けると、お知らせの代わりに `{ sheetFound, headers, today, rowCount, published, notPublished, invalidDate, future, notPublishedFlagSamples, invalidDateSamples }`（シートが無い場合は `{ sheetFound: false, expectedSheetName, sheetNames }`）を返す。タイトル・本文・添付URLは含めず、キャッシュもしない（`newsRowDiagnostics`）。
 - 応答：`{ updatedAt: ISO日時, news: [{ id, date, category, title, body, attachmentUrl }] }`。例外時は `{ error: 'お知らせを読み込めませんでした' }`。
 - GAS 側（`gas/news-sheet.js`・純粋関数）：`sheetText`、`sheetDateText`（Date→日本時間の日付、文字列はそのまま）、`sheetCategoryId`（日本語名→ID）、`isPublishedFlag`（公開フラグの判定）、`isPublishedRow`、`sheetRowToEntry`、`newsRowsToEntries`、`newsResponse`。
 - GAS 側（`gas/news-api.js`・副作用）：`doGet`（JSON を返す）、`CacheService` で5分キャッシュ（3万文字超は保存しない）、`onEdit`（シート編集でキャッシュ削除）、`setupNewsSheet`（新規シートのみ。見出し・入力規則・G列のチェックボックスを作成）。応答の形を変えたらキャッシュキーの版数を上げる（現在 `news-json-v2`）。GAS から呼ぶ `doGet` / `onEdit` / `setupNewsSheet` のみ `function` 宣言とする。
@@ -330,3 +333,4 @@
 | 2026-10-22 | お知らせをスプレッドシート＋GAS の Webアプリから fetch で取得する仕組みを追加（gas/ のスクリプト・設定手順書、予備データへのフォールバック、予約公開） |
 | 2026-10-22 | スプレッドシートの列構成を確定版（A:ID／B:日付／C:カテゴリ／D:タイトル／E:本文／F:添付ファイルURL／G:公開フラグ）に変更し、GAS の応答に `id`・`attachmentUrl` を追加 |
 | 2026-10-22 | お知らせに添付ファイルの画像プレビューと「添付ファイルを開く」ボタンを追加（Googleドライブの共有リンクはサムネイルURLに変換） |
+| 2026-10-22 | GAS で文字列の日付（`2026/10/20` 等）が未来と判定され公開されない不具合を修正。`?debug=1` の診断モードを追加 |
