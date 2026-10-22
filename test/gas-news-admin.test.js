@@ -102,6 +102,7 @@ test('Base64 から元のファイルの大きさを求める', () => {
 test('ドライブのファイル名は日付を先頭に付け、使えない文字を _ にし、空なら attachment にする', () => {
   assert.equal(call('adminFileName', '案内.pdf', '2026-10-22'), '2026-10-22_案内.pdf');
   assert.equal(call('adminFileName', '../a:b*?.pdf', '2026-10-22'), '2026-10-22_.._a_b__.pdf');
+  assert.equal(call('adminFileName', 'C:\\temp\\a<b>|"c".pdf', '2026-10-22'), '2026-10-22_C__temp_a_b___c_.pdf');
   assert.equal(call('adminFileName', '', '2026-10-22'), '2026-10-22_attachment');
   assert.equal(call('adminFileName', 'あ'.repeat(150), '2026-10-22').length, 11 + 100);
 });
