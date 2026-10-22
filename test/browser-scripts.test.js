@@ -29,6 +29,12 @@ test('ブラウザ環境でもテンプレートが依存関数を参照でき�
   assert.match(vm.runInContext('newsListHtml(latestNews(NEWS_DATA, 1), NEWS_CATEGORIES)', context), /2026年10月15日/);
 });
 
+test('ブラウザ環境では検証済み・凍結済みのお知らせ（NEWS_ITEMS）を表示に使う', () => {
+  const context = loadScripts('');
+  assert.equal(vm.runInContext('NEWS_ITEMS.length === NEWS_DATA.length && Object.isFrozen(NEWS_ITEMS[0])', context), true);
+  assert.match(vm.runInContext('newsListHtml(latestNews(NEWS_ITEMS, 3), NEWS_CATEGORIES)', context), /陸上教室②の練習時間/);
+});
+
 test('ブラウザ環境でも会費システムを組み立てられる', () => {
   const context = loadScripts('');
   assert.match(vm.runInContext('feeSystemHtml(FEE_SYSTEM)', context), /年間を4期/);
