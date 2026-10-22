@@ -169,11 +169,13 @@ const handleAdminRequest = (request) => {
 };
 
 // 管理画面からの POST（本文は text/plain の JSON）に応答する
+// 例外が起きたときは、原因を特定できるよう例外の種類とメッセージを detail として返す（GAS の「実行数」にも記録される）
 function doPost(e) {
   try {
     return jsonOutput(JSON.stringify(handleAdminRequest(parseAdminRequest(e?.postData?.contents))));
   } catch (error) {
     console.error(error);
-    return jsonOutput(JSON.stringify({ ok: false, errors: ['処理中にエラーが発生しました。時間をおいてもう一度お試しください'] }));
+    const message = '処理中にエラーが発生しました。時間をおいてもう一度お試しください';
+    return jsonOutput(JSON.stringify({ ok: false, errors: [message], detail: adminErrorDetail(error) }));
   }
 }

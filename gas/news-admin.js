@@ -118,3 +118,6 @@ const parseAdminRequest = (text) => {
 
 // パスワードの照合（スクリプト プロパティが未設定なら常に不一致）
 const isAdminPasswordMatch = (input, expected) => sheetText(expected) !== '' && sheetText(input) === sheetText(expected);
+
+// 例外の種類とメッセージ（管理画面で原因を特定するために返す。長すぎる場合は300文字まで）
+const adminErrorDetail = (error) => `${error?.name ?? 'Error'}: ${error?.message ?? String(error)}`.slice(0, 300);
