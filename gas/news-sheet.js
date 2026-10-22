@@ -24,8 +24,16 @@ const isSheetDate = (value) => Object.prototype.toString.call(value) === '[objec
 const jstDateText = (date) =>
   Number.isNaN(date.getTime()) ? '' : new Date(date.getTime() + JST_OFFSET_MS).toISOString().slice(0, 10);
 
-// 日付セル（Date）を日本時間の 'YYYY-MM-DD' にする。文字列のセルはそのまま（形式の誤りはサイト側で検出する）
-const sheetDateText = (value) => (isSheetDate(value) ? jstDateText(value) : sheetText(value));
+const pad2 = (text) => text.padStart(2, '0');
+
+// 文字列の日付（2026/10/20、2026.10.20、2026-1-5、2026年10月20日）を 'YYYY-MM-DD' にそろえる（それ以外の形はそのまま）
+const normalizeDateText = (text) => {
+  const match = /^(\d{4})[/.\-年](\d{1,2})[/.\-月](\d{1,2})日?$/.exec(text);
+  return match ? `${match[1]}-${pad2(match[2])}-${pad2(match[3])}` : text;
+};
+
+// 日付セル（Date）を日本時間の 'YYYY-MM-DD' にする。文字列のセルは区切りをそろえる（形式の誤りはサイト側で検出する）
+const sheetDateText = (value) => (isSheetDate(value) ? jstDateText(value) : normalizeDateText(sheetText(value)));
 
 // 日本語のカテゴリ名をIDに変換する（ID が直接書かれていればそのまま）
 const sheetCategoryId = (value) => NEWS_SHEET_CATEGORY_IDS[sheetText(value)] ?? sheetText(value);
@@ -33,11 +41,16 @@ const sheetCategoryId = (value) => NEWS_SHEET_CATEGORY_IDS[sheetText(value)] ?? 
 // 公開フラグ：チェックボックスの ✓（true）か、「TRUE」「公開」「1」「○」「yes」なら公開
 const isPublishedFlag = (value) => value === true || NEWS_PUBLISHED_WORDS.includes(sheetText(value).toLowerCase());
 
-// 公開フラグがあり、日付が今日（'YYYY-MM-DD'）以前の行だけを出す（未来の日付は予約公開）
-const isPublishedRow = (row, today) => {
+// 行が公開されない理由（公開フラグなし／日付が読めない／未来の日付）。公開される行は空文字
+const rowSkipReason = (row, today) => {
   const date = sheetDateText(row[NEWS_SHEET_COLUMNS.date]);
-  return isPublishedFlag(row[NEWS_SHEET_COLUMNS.published]) && date !== '' && date <= today;
+  if (!isPublishedFlag(row[NEWS_SHEET_COLUMNS.published])) return 'notPublished';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'invalidDate';
+  return date <= today ? '' : 'future';
 };
+
+// 公開フラグがあり、日付が今日（'YYYY-MM-DD'）以前の行だけを出す（未来の日付は予約公開）
+const isPublishedRow = (row, today) => rowSkipReason(row, today) === '';
 
 // 1行を { id, date, category, title, body, attachmentUrl } にする（公開フラグは出力しない）
 // 添付ファイルURLはシートの値のまま出し、Googleドライブのプレビュー用URLへの変換はサイト側で行う
@@ -57,9 +70,28 @@ const newsRowsToEntries = (rows, today) =>
 // Webアプリが返すJSONの中身
 const newsResponse = (entries, updatedAt) => Object.freeze({ updatedAt, news: entries });
 
+// ---- 診断用（URL に ?debug=1 を付けたときだけ返す。お知らせの中身は含めない） ----
+
+const countOf = (list, value) => list.filter((item) => item === value).length;
+
+const distinctSamples = (values) => [...new Set(values.filter((value) => value !== ''))].slice(0, 5);
+
+const samplesFor = (rows, reasons, reason, toText) => distinctSamples(rows.filter((_, i) => reasons[i] === reason).map(toText));
+
+// 行数・公開されない理由ごとの件数と、認識できなかった公開フラグ・日付の値の例（各5種類まで）
+const newsRowDiagnostics = (rows, today) => {
+  const reasons = rows.map((row) => rowSkipReason(row, today));
+  return Object.freeze({
+    today, rowCount: rows.length, published: countOf(reasons, ''),
+    notPublished: countOf(reasons, 'notPublished'), invalidDate: countOf(reasons, 'invalidDate'), future: countOf(reasons, 'future'),
+    notPublishedFlagSamples: samplesFor(rows, reasons, 'notPublished', (row) => sheetText(row[NEWS_SHEET_COLUMNS.published])),
+    invalidDateSamples: samplesFor(rows, reasons, 'invalidDate', (row) => sheetDateText(row[NEWS_SHEET_COLUMNS.date])),
+  });
+};
+
 if (typeof module === 'object' && module.exports) {
   module.exports = {
     NEWS_SHEET_COLUMNS, NEWS_SHEET_CATEGORY_IDS, NEWS_PUBLISHED_WORDS, sheetText, sheetDateText, sheetCategoryId,
-    isPublishedFlag, isPublishedRow, sheetRowToEntry, newsRowsToEntries, newsResponse,
+    isPublishedFlag, rowSkipReason, isPublishedRow, sheetRowToEntry, newsRowsToEntries, newsResponse, newsRowDiagnostics,
   };
 }

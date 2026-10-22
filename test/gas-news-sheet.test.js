@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { NEWS_CATEGORIES } = require('../js/data/news-data.js');
 const {
   NEWS_SHEET_CATEGORY_IDS, sheetText, sheetDateText, sheetCategoryId,
-  isPublishedFlag, isPublishedRow, sheetRowToEntry, newsRowsToEntries, newsResponse,
+  isPublishedFlag, rowSkipReason, isPublishedRow, sheetRowToEntry, newsRowsToEntries, newsResponse, newsRowDiagnostics,
 } = require('../gas/news-sheet.js');
 
 // 日本時間 2026-10-15 0:00 は UTC では前日 15:00
@@ -79,4 +79,37 @@ test('公開対象の行だけを変換し、元の配列は変更しない', ()
 
 test('Webアプリの応答は更新日時とお知らせの配列を持つ', () => {
   assert.deepEqual(newsResponse([], '2026-10-15T00:00:00.000Z'), { updatedAt: '2026-10-15T00:00:00.000Z', news: [] });
+});
+
+test('文字列の日付は区切りや桁をそろえて YYYY-MM-DD にし、認識できない形はそのまま返す', () => {
+  [['2026/10/20', '2026-10-20'], ['2026.1.5', '2026-01-05'], ['2026-1-5', '2026-01-05'], ['2026年10月20日', '2026-10-20']]
+    .forEach(([text, expected]) => assert.equal(sheetDateText(text), expected, text));
+  assert.equal(sheetDateText('10/20'), '10/20');
+});
+
+test('文字列の日付（2026/10/20）の行も、公開フラグが「公開」なら公開対象にする', () => {
+  assert.equal(isPublishedRow(row('n1', '2026/10/20', 'お知らせ', 'a', '', '', '公開'), '2026-10-22'), true);
+});
+
+test('公開されない理由を「公開フラグなし・日付が読めない・未来の日付」に分ける', () => {
+  assert.equal(rowSkipReason(row('n1', '2026-10-01', '', '', '', '', '非公開'), '2026-10-15'), 'notPublished');
+  assert.equal(rowSkipReason(row('n1', '10/01', '', '', '', '', '公開'), '2026-10-15'), 'invalidDate');
+  assert.equal(rowSkipReason(row('n1', '2026-10-16', '', '', '', '', '公開'), '2026-10-15'), 'future');
+  assert.equal(rowSkipReason(row('n1', '2026-10-15', '', '', '', '', '公開'), '2026-10-15'), '');
+});
+
+test('診断結果は件数と理由ごとの件数、認識できない値の例だけを返し、タイトルや本文は含めない', () => {
+  const rows = [
+    row('n1', '2026-10-01', 'お知らせ', '秘密のタイトル', '秘密の本文', '', '公開'),
+    row('n2', '2026-10-01', 'お知らせ', 'b', '', '', '公開済み'),
+    row('n3', '2026-10-01', 'お知らせ', 'c', '', '', '公開済み'),
+    row('n4', '10月1日', 'お知らせ', 'd', '', '', '公開'),
+    row('n5', '2099-01-01', 'お知らせ', 'e', '', '', true),
+  ];
+  const result = newsRowDiagnostics(rows, '2026-10-15');
+  assert.deepEqual(result, {
+    today: '2026-10-15', rowCount: 5, published: 1, notPublished: 2, invalidDate: 1, future: 1,
+    notPublishedFlagSamples: ['公開済み'], invalidDateSamples: ['10月1日'],
+  });
+  assert.doesNotMatch(JSON.stringify(result), /秘密/);
 });
