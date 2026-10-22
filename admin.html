@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- 職員向けの管理画面のため、検索エンジンに載せない（サイトのメニューからもリンクしない） -->
+  <meta name="robots" content="noindex, nofollow">
+  <title>お知らせ管理｜あおぞら総合型地域スポーツクラブ</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body data-page="admin" class="admin-page">
+  <a class="skip-link" href="#main">本文へ移動</a>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="./index.html">
+        <span class="brand__mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="5" fill="#fff"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <span class="brand__name">あおぞら総合型地域スポーツクラブ</span>
+      </a>
+      <span class="admin-badge">職員用 お知らせ管理</span>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="page-header">
+      <div class="container">
+        <h1>お知らせ管理</h1>
+        <p>お知らせの追加と、登録済みのお知らせの確認ができます。</p>
+      </div>
+    </div>
+
+    <!-- ログイン（パスワードの確認は GAS 側で行う） -->
+    <section id="login-view" class="section" aria-labelledby="login-heading">
+      <div class="container container--narrow">
+        <form id="login-form" class="card form" novalidate>
+          <h2 id="login-heading">ログイン</h2>
+          <p id="login-message" class="admin-message" role="alert" hidden></p>
+          <div class="form-field">
+            <label for="admin-password">職員用の共通パスワード</label>
+            <input type="password" id="admin-password" name="password" autocomplete="current-password" required>
+          </div>
+          <button type="submit" class="button button--primary">ログイン</button>
+        </form>
+      </div>
+    </section>
+
+    <div id="admin-view" hidden>
+      <section class="section" aria-labelledby="news-form-heading">
+        <div class="container container--narrow">
+          <div class="admin-toolbar">
+            <p class="admin-toolbar__note">ログイン中です（このタブを閉じるとログアウトします）</p>
+            <button type="button" id="logout-button" class="button button--outline admin-toolbar__button">ログアウト</button>
+          </div>
+          <form id="news-form" class="card form" novalidate>
+            <h2 id="news-form-heading">お知らせを追加する</h2>
+            <p id="form-message" class="admin-message" role="status" aria-live="polite" hidden></p>
+            <div class="form-row">
+              <div class="form-field">
+                <label for="news-date">日付<span class="required">必須</span></label>
+                <input type="date" id="news-date" name="date" required>
+                <p class="form-hint">今日より後の日付にすると、その日になってからサイトに表示されます（予約公開）。</p>
+              </div>
+              <div class="form-field">
+                <label for="news-category">カテゴリ<span class="required">必須</span></label>
+                <select id="news-category" name="category" required></select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="news-title">タイトル<span class="required">必須</span></label>
+              <input type="text" id="news-title" name="title" maxlength="100" required>
+            </div>
+            <div class="form-field">
+              <label for="news-body">本文<span class="optional">任意</span></label>
+              <textarea id="news-body" name="body" maxlength="2000"></textarea>
+            </div>
+            <div class="form-field">
+              <label for="news-file">添付ファイル（PDF・画像）<span class="optional">任意</span></label>
+              <input type="file" id="news-file" name="file" accept="application/pdf,image/jpeg,image/png,image/gif,image/webp">
+              <p class="form-hint">PDF・JPEG・PNG・GIF・WebP（10MBまで）。Googleドライブに保存され、サイトからリンクを知っている人が見られるようになります。個人情報を含むファイルは添付しないでください。</p>
+            </div>
+            <div class="form-field">
+              <label for="news-attachment-url">添付ファイルのURL<span class="optional">任意</span></label>
+              <input type="url" id="news-attachment-url" name="attachmentUrl" inputmode="url" placeholder="https://drive.google.com/file/d/…/view">
+              <p class="form-hint">すでにドライブにあるファイルを使う場合に入力します。上でファイルを選んだ場合は、ファイルが優先されます。</p>
+            </div>
+            <label class="choice">
+              <input type="checkbox" name="published" checked>
+              <span>サイトに公開する（チェックを外すと下書きとして保存）</span>
+            </label>
+            <button type="submit" class="button button--accent">お知らせを追加する</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="section section--soft" aria-labelledby="news-list-admin-heading">
+        <div class="container">
+          <div class="section__header">
+            <h2 id="news-list-admin-heading">登録済みのお知らせ</h2>
+            <button type="button" id="reload-button" class="button button--outline admin-toolbar__button">最新の状態にする</button>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr><th scope="col">ID</th><th scope="col">日付</th><th scope="col">状態</th><th scope="col">カテゴリ</th><th scope="col">タイトル</th></tr>
+              </thead>
+              <tbody id="admin-news-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="./js/default-config.js"></script>
+  <script src="./config.js"></script>
+  <script src="./js/data/news-data.js"></script>
+  <script src="./js/data/classes-data.js"></script>
+  <script src="./js/lib/config-merge.js"></script>
+  <script src="./js/lib/news-logic.js"></script>
+  <script src="./js/lib/class-logic.js"></script>
+  <script src="./js/lib/form-validate.js"></script>
+  <script src="./js/lib/templates.js"></script>
+  <script src="./js/lib/admin-logic.js"></script>
+  <script src="./js/admin.js"></script>
+</body>
+</html>

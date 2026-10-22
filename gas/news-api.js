@@ -79,3 +79,100 @@ function setupNewsSheet() {
   sheet.setFrozenRows(1);
   applyNewsSheetRules(sheet);
 }
+
+// ---- 管理画面（admin.html）からの POST：ログイン・一覧・追加（添付ファイルのアップロードを含む） ----
+// 共通パスワードはコードに書かず、GAS の「プロジェクトの設定」→「スクリプト プロパティ」に ADMIN_PASSWORD として登録する
+
+const NEWS_ADMIN_PASSWORD_KEY = 'ADMIN_PASSWORD';
+const NEWS_ADMIN_FOLDER_KEY = 'ADMIN_FOLDER_ID';
+const NEWS_ADMIN_FOLDER_NAME = 'お知らせ添付ファイル';
+const NEWS_LOGIN_FAIL_KEY = 'news-admin-login-fail';
+const NEWS_LOGIN_MAX_FAILS = 10;
+const NEWS_LOGIN_LOCK_SECONDS = 900;
+const NEWS_LOCK_WAIT_MS = 20000;
+
+const scriptProperties = () => PropertiesService.getScriptProperties();
+
+const loginFailCount = () => Number(CacheService.getScriptCache().get(NEWS_LOGIN_FAIL_KEY) ?? 0);
+
+const recordLoginFail = () =>
+  CacheService.getScriptCache().put(NEWS_LOGIN_FAIL_KEY, String(loginFailCount() + 1), NEWS_LOGIN_LOCK_SECONDS);
+
+// パスワードを確認し、誤りがあればメッセージを返す（15分間に10回失敗したら一時的に受け付けない）
+const adminPasswordError = (password) => {
+  const expected = scriptProperties().getProperty(NEWS_ADMIN_PASSWORD_KEY) ?? '';
+  if (sheetText(expected) === '') return '管理画面のパスワードが設定されていません（スクリプト プロパティ ADMIN_PASSWORD）';
+  if (loginFailCount() >= NEWS_LOGIN_MAX_FAILS) return 'パスワードの誤りが続いたため、15分ほど時間をおいてからお試しください';
+  if (isAdminPasswordMatch(password, expected)) return '';
+  recordLoginFail();
+  return 'パスワードが違います';
+};
+
+// 添付ファイルの保存先フォルダ（初回はマイドライブに作成し、IDをスクリプト プロパティに保存する）
+const newsAttachmentFolder = () => {
+  const savedId = scriptProperties().getProperty(NEWS_ADMIN_FOLDER_KEY);
+  if (savedId) return DriveApp.getFolderById(savedId);
+  const folder = DriveApp.createFolder(NEWS_ADMIN_FOLDER_NAME);
+  scriptProperties().setProperty(NEWS_ADMIN_FOLDER_KEY, folder.getId());
+  return folder;
+};
+
+// 添付ファイルをドライブに保存し、「リンクを知っている全員が閲覧可」にして共有URLを返す
+const saveNewsAttachment = (file, date) => {
+  const blob = Utilities.newBlob(Utilities.base64Decode(sheetText(file.data)), sheetText(file.type), adminFileName(file.name, date));
+  const saved = newsAttachmentFolder().createFile(blob);
+  saved.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return saved.getUrl();
+};
+
+// 同時に複数の職員が追加しても ID が重ならないよう、書き込みは1人ずつ行う
+const withNewsLock = (task) => {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(NEWS_LOCK_WAIT_MS);
+  try {
+    return task();
+  } finally {
+    lock.releaseLock();
+  }
+};
+
+// シートの末尾に1行追加し、公開用のキャッシュを消してすぐサイトに反映させる（追加したIDを返す）
+const appendNewsRow = (input, attachmentUrl) => {
+  const id = nextNewsId(readNewsRows());
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName(NEWS_SHEET_NAME)
+    .appendRow([...adminInputToRow({ ...input, attachmentUrl }, id)]);
+  CacheService.getScriptCache().remove(NEWS_CACHE_KEY);
+  return id;
+};
+
+// お知らせを追加する（ファイルがあればドライブに保存し、その共有URLを添付ファイルURLにする）
+const createNews = (input) => {
+  const errors = [...adminInputErrors(input), ...adminFileErrors(input?.file)];
+  if (errors.length > 0) return { ok: false, errors };
+  return withNewsLock(() => {
+    const attachmentUrl = input.file ? saveNewsAttachment(input.file, sheetText(input.date)) : sheetText(input.attachmentUrl);
+    return { ok: true, id: appendNewsRow(input, attachmentUrl), attachmentUrl };
+  });
+};
+
+const listAdminNews = () => ({ ok: true, news: adminNewsList(readNewsRows(), sheetDateText(new Date())) });
+
+const NEWS_ADMIN_ACTIONS = Object.freeze({ login: () => ({ ok: true }), list: listAdminNews, create: createNews });
+
+// どの操作も、先にパスワードを確認する（auth: false のとき管理画面はログイン画面に戻る）
+const handleAdminRequest = (request) => {
+  const action = NEWS_ADMIN_ACTIONS[request?.action];
+  if (!action) return { ok: false, errors: ['不明な操作です'] };
+  const passwordError = adminPasswordError(request.password);
+  return passwordError ? { ok: false, auth: false, errors: [passwordError] } : action(request.data);
+};
+
+// 管理画面からの POST（本文は text/plain の JSON）に応答する
+function doPost(e) {
+  try {
+    return jsonOutput(JSON.stringify(handleAdminRequest(parseAdminRequest(e?.postData?.contents))));
+  } catch (error) {
+    console.error(error);
+    return jsonOutput(JSON.stringify({ ok: false, errors: ['処理中にエラーが発生しました。時間をおいてもう一度お試しください'] }));
+  }
+}

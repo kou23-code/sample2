@@ -99,3 +99,31 @@ test('HTTPエラーや応答の形式違いなら予備のお知らせを使う'
   const results = await Promise.all(contexts.map(loadedTitles));
   results.forEach((titles) => assert.equal(titles.length, 6));
 });
+
+// ---- お知らせ管理画面（admin.html と同じ順で読み込む） ----
+
+const ADMIN_SCRIPT_ORDER = [...SCRIPT_ORDER.slice(0, -1), 'js/lib/admin-logic.js', 'js/admin.js'];
+
+const loadAdminScripts = (prelude) => {
+  const context = vm.createContext({ URLSearchParams });
+  vm.runInContext(prelude, context);
+  ADMIN_SCRIPT_ORDER.forEach((file) => vm.runInContext(fs.readFileSync(path.join(ROOT, file), 'utf8'), context, { filename: file }));
+  return context;
+};
+
+test('管理画面のスクリプトをブラウザと同じ順で読み込んでも名前が衝突せず、依存関数を参照できる', () => {
+  const context = loadAdminScripts('');
+  assert.equal(vm.runInContext('typeof initAdmin', context), 'function');
+  assert.match(vm.runInContext("adminNewsTableHtml([{ id: '1', date: '2026-10-22', category: 'info', title: 't', status: 'published' }], NEWS_CATEGORIES)", context), /公開中/);
+});
+
+test('管理画面とサイトのスクリプトを両方読み込んでも名前が衝突しない', () => {
+  const context = loadScripts('');
+  ['js/lib/admin-logic.js', 'js/admin.js'].forEach((file) => vm.runInContext(fs.readFileSync(path.join(ROOT, file), 'utf8'), context));
+  assert.equal(vm.runInContext('typeof initAdmin === "function" && typeof initSite === "function"', context), true);
+});
+
+test('管理画面は config.js の newsEndpoint を取得先に使う', () => {
+  const context = loadAdminScripts("const SITE_CONFIG = { newsEndpoint: 'https://script.google.com/macros/s/x/exec' };");
+  assert.equal(vm.runInContext('adminSiteConfig().newsEndpoint', context), 'https://script.google.com/macros/s/x/exec');
+});

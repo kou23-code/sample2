@@ -26,6 +26,7 @@
 | F-006 | 問い合わせ・体験申込 | 電話受付案内（tel リンク）、入力フォーム、検証、送信完了表示 | 実装済 |
 | F-007 | 共通UI | ヘッダー・メニュー・フッター、スマホ用の固定連絡バー | 実装済 |
 | F-008 | お知らせのシート連携 | スプレッドシートに書いたお知らせを GAS の Webアプリ経由で取得して表示（未設定・失敗時は予備データ） | 実装済（GASの公開は運用時に実施） |
+| F-009 | お知らせ管理画面 | 共通パスワードでログインし、お知らせの追加（添付ファイルはドライブに保存）と一覧の確認を行う（admin.html） | 実装済（GASの再デプロイは運用時に実施） |
 
 ## 2. ディレクトリ構成
 
@@ -36,6 +37,7 @@
 ├─ news.html               お知らせ一覧（data-page="news"）
 ├─ classes.html            教室案内（data-page="classes"）
 ├─ contact.html            お問い合わせ・体験申込（data-page="contact"）
+├─ admin.html              職員用のお知らせ管理画面（data-page="admin"・メニューからはリンクしない）
 ├─ config-sample.js        config.js のひな形（ダミー値のみ）
 ├─ config.js               実名設定（.gitignore 対象・任意。リポジトリには含めない）
 ├─ css/style.css           共通スタイル
@@ -48,10 +50,13 @@
 │  ├─ lib/class-logic.js   教室の絞り込み・検索・表示用データ抽出（純粋関数）
 │  ├─ lib/form-validate.js フォーム検証・URLクエリ解析（純粋関数）
 │  ├─ lib/templates.js     HTML文字列の生成・エスケープ（純粋関数）
+│  ├─ lib/admin-logic.js   管理画面の入力チェック・送信データ・一覧HTML（純粋関数）
+│  ├─ admin.js             管理画面の画面操作と GAS への送信（副作用）
 │  └─ app.js               DOM反映・イベント登録（副作用はここに集約）
 ├─ gas/                    GASエディタに貼り付けるスクリプト（ブラウザでは読み込まない）
 │  ├─ news-sheet.js        シートの行→お知らせへの変換（純粋関数）
-│  ├─ news-api.js          Webアプリの入口 doGet・キャッシュ・シート初期設定（副作用）
+│  ├─ news-admin.js        管理画面からの入力チェック・行の組み立て・採番・添付ファイルの検証（純粋関数）
+│  ├─ news-api.js          Webアプリの入口 doGet・doPost・キャッシュ・認証・ドライブ保存・シート初期設定（副作用）
 │  └─ README.md            スプレッドシートと GAS の設定手順・職員向けの書き方
 ├─ test/                   Node.js 標準テストランナーの単体テスト
 ├─ package.json            npm test → node --test
@@ -296,6 +301,39 @@
   - `formEndpoint` が設定されている場合：JSON を POST し、成功時に完了画面、失敗時に電話案内付きのエラーを表示する。
 - 完了画面：「送信が完了しました」と入力内容の一覧（エスケープ済み）を表示し、見出しにフォーカスを移す。
 
+### 5.7 お知らせ管理画面（admin.html・F-009）
+
+- 職員がスプレッドシートを開かずに、お知らせの追加（添付ファイルのアップロードを含む）と登録済みの一覧の確認を行う画面。公開ページのメニューからはリンクせず、`<meta name="robots" content="noindex, nofollow">` で検索エンジンに載せない。
+- スクリプト：`app.js` の代わりに `js/lib/admin-logic.js`（純粋関数）と `js/admin.js`（画面操作・通信）を読み込む。取得先は公開ページと同じ `config.js` の `newsEndpoint`。
+
+#### 認証（共通パスワード）
+
+- 職員共通のパスワード1つ。誰が更新したかの履歴は持たない。
+- パスワードはコード・HTML・リポジトリに書かず、GAS の「スクリプト プロパティ」`ADMIN_PASSWORD` に登録する（未設定の場合は誰もログインできない）。照合は GAS 側（`isAdminPasswordMatch`）で行い、画面側では判定しない。
+- 画面は入力されたパスワードを `sessionStorage` に置き（タブを閉じると消える）、すべての操作でパスワードを送る。GAS が `auth: false` を返したらログイン画面に戻す。
+- 総当たり対策：失敗回数を CacheService に記録し、15分以内に10回失敗したら15分間は正しいパスワードでも受け付けない。
+
+#### 通信（admin.html → GAS doPost）
+
+- `fetch` の POST で、本文は JSON の文字列 `{ action, password, data }`（`Content-Type: text/plain` の単純なリクエストにして事前確認の通信を避ける）。応答は `{ ok, errors[], ... }`（`normalizeAdminResponse` で形をそろえる）。60秒で打ち切る。
+
+| action | 内容 | 応答 |
+| --- | --- | --- |
+| `login` | パスワードの確認のみ | `{ ok: true }` |
+| `list` | 下書き・予約公開を含む全件（`adminNewsList`。状態 `status`：published／notPublished／future／invalidDate） | `{ ok: true, news: [...] }` |
+| `create` | お知らせの追加（`data`：date・category・title・body・attachmentUrl・published・file） | `{ ok: true, id, attachmentUrl }` |
+
+- 追加の流れ（GAS）：入力チェック（`adminInputErrors`・`adminFileErrors`）→ `LockService` で排他 → 添付ファイルがあればドライブに保存 → ID を自動採番（`nextNewsId`：数字のIDの最大値＋1）→ シート末尾に追加（`adminInputToRow`。カテゴリは日本語名、公開フラグは「公開」／「非公開」、先頭が `= + - @` の文字は `'` を付けて数式の実行を防ぐ）→ 公開用キャッシュを削除してすぐサイトに反映。
+- 入力の上限：タイトル100文字（必須）、本文2000文字、添付URLは https で500文字まで。日付は実在する `YYYY-MM-DD`。画面側（`adminFormErrors`）でも確認するが、最終的な検証は GAS 側で必ず行う。
+- 削除・編集は現時点では行わない（シートを直接編集する）。
+
+#### 添付ファイルのアップロード
+
+- 画面の `<input type="file">` で PDF・JPEG・PNG・GIF・WebP（10MBまで）を選ぶ。`FileReader` で Base64 にし、`data.file = { name, type, data }` として送る。ファイルを選んだ場合は「添付ファイルのURL」欄より優先する。
+- GAS は Base64 を復元して、マイドライブの専用フォルダ「お知らせ添付ファイル」に保存する（初回に自動作成し、フォルダIDをスクリプト プロパティ `ADMIN_FOLDER_ID` に保存。別のフォルダを使う場合はこの値を書き換える）。ファイル名は `日付_元のファイル名`（使えない文字は `_`、名前は100文字まで）。
+- 保存したファイルは「リンクを知っている全員が閲覧可」にし、その共有URL（`https://drive.google.com/file/d/ID/view?…`）をシートの F列に書く。サイト側は既存の仕組み（5.4）でプレビューとボタンを表示する。
+- 受け付ける種類・大きさは GAS（`NEWS_ADMIN_FILE_TYPES`・`NEWS_ADMIN_MAX_FILE_BYTES`）と画面（`ADMIN_UPLOAD_TYPES`・`ADMIN_UPLOAD_MAX_BYTES`）で同じ値にする（単体テストで一致を確認）。
+
 ## 6. デザイン方針
 
 - 芝生や木々を連想させるグリーン系を基調にする（メイン：フォレストグリーン `#2a7348`、濃色 `#1e5a38`、若草色 `#8cc63f`〔装飾のみ〕、背景 `#f6faf1`）。申込ボタンはオレンジ系で目立たせる。文字色と背景色のコントラストはWCAG AA相当を確保する。
@@ -334,3 +372,4 @@
 | 2026-10-22 | スプレッドシートの列構成を確定版（A:ID／B:日付／C:カテゴリ／D:タイトル／E:本文／F:添付ファイルURL／G:公開フラグ）に変更し、GAS の応答に `id`・`attachmentUrl` を追加 |
 | 2026-10-22 | お知らせに添付ファイルの画像プレビューと「添付ファイルを開く」ボタンを追加（Googleドライブの共有リンクはサムネイルURLに変換） |
 | 2026-10-22 | GAS で文字列の日付（`2026/10/20` 等）が未来と判定され公開されない不具合を修正。`?debug=1` の診断モードを追加 |
+| 2026-10-22 | お知らせ管理画面（admin.html）を追加：共通パスワード（スクリプト プロパティ）でログインし、お知らせの追加・一覧表示、添付ファイルのドライブ保存に対応 |
