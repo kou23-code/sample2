@@ -104,7 +104,7 @@ const initTopPage = (doc, config) => {
 };
 
 const renderNews = (doc, categoryId, news) => {
-  const items = sortNewsByDate(filterNewsByCategory(news, categoryId));
+  const items = sortNewsForDisplay(filterNewsByCategory(news, categoryId));
   renderHtml(doc.getElementById('news-list'), newsListHtml(items, NEWS_CATEGORIES));
   renderText(doc.getElementById('news-count'), resultCountText(items.length, '件のお知らせ'));
 };

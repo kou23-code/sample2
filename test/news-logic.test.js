@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { NEWS_CATEGORIES, NEWS_DATA } = require('../js/data/news-data.js');
 const {
-  sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa,
+  sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa, newsOrder, sortNewsForDisplay,
   isNewsDate, newsEntryErrors, findNewsProblems, toNewsItem, prepareNews,
   isNewsEndpoint, parseNewsResponse,
   isHttpsUrl, driveFileId, attachmentPreviewSrc, newsAttachment, findAttachmentProblems,
@@ -84,9 +84,9 @@ test('誤りのあるお知らせだけを番号とタイトル付きで返す',
   assert.deepEqual(problems.map((p) => [p.number, p.title, p.errors.length]), [[2, '体験会', 1], [3, '', 1]]);
 });
 
-test('表示用データは前後の空白を除いて凍結し、id・body・添付URLの省略時は空文字にする', () => {
+test('表示用データは前後の空白を除いて凍結し、id・body・添付URLの省略時は空文字、固定順位の省略時は null にする', () => {
   const item = toNewsItem({ date: ' 2026-10-15 ', category: ' event ', title: ' 体験会 ' });
-  assert.deepEqual(item, { id: '', date: '2026-10-15', category: 'event', title: '体験会', body: '', attachmentUrl: '' });
+  assert.deepEqual(item, { id: '', date: '2026-10-15', category: 'event', title: '体験会', body: '', attachmentUrl: '', order: null });
   assert.equal(Object.isFrozen(item), true);
 });
 
@@ -157,4 +157,39 @@ test('添付ファイルは開くURLとプレビュー画像のURLにし、使�
 test('添付URLが書かれているのに使えないお知らせだけを番号付きで返す', () => {
   const entries = [okEntry, { ...okEntry, attachmentUrl: 'https://ok.example/a.pdf' }, { ...okEntry, attachmentUrl: 'ドライブ参照' }, null];
   assert.deepEqual(findAttachmentProblems(entries), [{ number: 3, title: '体験会', url: 'ドライブ参照' }]);
+});
+
+// ---- 表示順（固定順位） ----
+
+const ordered = (id, date, order) => ({ id, date, category: 'info', title: id, order });
+
+test('固定順位は数値・数字の文字列なら数値にし、空や数値でないものは null にする', () => {
+  [[1, 1], ['2', 2], [' 3 ', 3], [1.5, 1.5]].forEach(([value, expected]) => assert.equal(newsOrder(value), expected, String(value)));
+  [undefined, null, '', ' ', 'abc', NaN, Infinity].forEach((value) => assert.equal(newsOrder(value), null, String(value)));
+});
+
+test('固定順位があるものを先に小さい順、ないものは日付の新しい順に並べ、元の配列は変更しない', () => {
+  const news = [ordered('a', '2026-10-20', null), ordered('b', '2026-09-01', 2), ordered('c', '2026-10-22', null), ordered('d', '2026-08-01', 1)];
+  assert.deepEqual(sortNewsForDisplay(news).map((n) => n.id), ['d', 'b', 'c', 'a']);
+  assert.deepEqual(news.map((n) => n.id), ['a', 'b', 'c', 'd']);
+});
+
+test('同じ固定順位どうしは日付の新しい順に並べる', () => {
+  const news = [ordered('old', '2026-09-01', 1), ordered('new', '2026-10-01', 1)];
+  assert.deepEqual(sortNewsForDisplay(news).map((n) => n.id), ['new', 'old']);
+});
+
+test('トップの最新3件も固定順位のお知らせを先頭に表示する', () => {
+  const news = [ordered('a', '2026-10-22', null), ordered('b', '2026-10-21', null), ordered('pin', '2026-01-01', 1), ordered('c', '2026-10-20', null)];
+  assert.deepEqual(latestNews(news, 3).map((n) => n.id), ['pin', 'a', 'b']);
+});
+
+test('固定順位が数値でないお知らせは誤りとして知らせ、空・省略・数値は誤りなし', () => {
+  assert.match(newsEntryErrors({ ...okEntry, order: '一番上' }, NEWS_CATEGORIES)[0], /order（固定順位）「一番上」は数値/);
+  [undefined, null, '', 3, '3'].forEach((order) => assert.deepEqual(newsEntryErrors({ ...okEntry, order }, NEWS_CATEGORIES), [], String(order)));
+});
+
+test('表示用データは固定順位を数値で残す', () => {
+  assert.equal(toNewsItem({ ...okEntry, order: '2' }).order, 2);
+  assert.deepEqual(prepareNews([ordered('x', '2026-10-01', 5)], NEWS_CATEGORIES).map((n) => n.order), [5]);
 });
