@@ -44,9 +44,9 @@ test('タイトルは100文字まで、入力が無い場合もすべての必�
   assert.equal(call('adminInputErrors', null).length, 3);
 });
 
-test('入力をシートの7列（ID〜公開フラグ）の1行にし、カテゴリは日本語名、文字は数式対策をする', () => {
+test('入力をシートの8列（ID〜固定順位）の1行にし、カテゴリは日本語名、文字は数式対策をする', () => {
   assert.deepEqual(call('adminInputToRow', { ...okInput, title: '=危険' }, '5'),
-    ['5', '2026-10-22', 'お知らせ', "'=危険", '本文', '', '公開']);
+    ['5', '2026-10-22', 'お知らせ', "'=危険", '本文', '', '公開', '']);
   assert.equal(call('adminInputToRow', { ...okInput, published: 'true' }, '5')[6], '非公開');
 });
 
@@ -116,4 +116,16 @@ test('パスワードは一致したときだけ通し、未設定（空）な�
   assert.equal(call('isAdminPasswordMatch', ' secret ', 'secret'), true);
   assert.equal(call('isAdminPasswordMatch', 'wrong', 'secret'), false);
   assert.equal(call('isAdminPasswordMatch', '', ''), false);
+});
+
+test('固定順位は空欄か1〜9999の整数だけを受け付け、数値としてH列に書く', () => {
+  ['', '1', ' 20 ', '9999'].forEach((order) => assert.deepEqual(call('adminInputErrors', { ...okInput, order }), [], order));
+  ['0', '10000', '1.5', '-1', '一番上'].forEach((order) =>
+    assert.match(call('adminInputErrors', { ...okInput, order })[0], /固定順位は1〜9999の整数/, order));
+  assert.equal(call('adminInputToRow', { ...okInput, order: '3' }, '5')[7], 3);
+});
+
+test('管理画面の一覧は固定順位も返す（空欄は null）', () => {
+  const rows = [['1', '2026-10-01', 'お知らせ', 'a', '', '', '公開', 2], ['2', '2026-10-01', 'お知らせ', 'b', '', '', '公開', '']];
+  assert.deepEqual(call('adminNewsList', rows, '2026-10-22').map((item) => item.order), [2, null]);
 });

@@ -4,9 +4,9 @@
 // ※ doGet / onEdit / setupNewsSheet は GAS から呼び出すため function 宣言にしている。
 
 const NEWS_SHEET_NAME = 'news';
-const NEWS_SHEET_HEADERS = Object.freeze(['ID', '日付', 'カテゴリ', 'タイトル', '本文', '添付ファイルURL', '公開フラグ']);
+const NEWS_SHEET_HEADERS = Object.freeze(['ID', '日付', 'カテゴリ', 'タイトル', '本文', '添付ファイルURL', '公開フラグ', '固定順位']);
 // 応答の形を変えたときは末尾の版数を上げ、古い形のキャッシュを使わないようにする
-const NEWS_CACHE_KEY = 'news-json-v2';
+const NEWS_CACHE_KEY = 'news-json-v3';
 const NEWS_CACHE_SECONDS = 300;
 // CacheService は1件100KBまで。日本語は1文字3バイトのため、文字数で余裕をもって判定する
 const NEWS_CACHE_MAX_CHARS = 30000;
@@ -61,9 +61,10 @@ function onEdit() {
   CacheService.getScriptCache().remove(NEWS_CACHE_KEY);
 }
 
-// 日付とカテゴリの入力規則、公開フラグのチェックボックスを設定する
+// 日付・カテゴリ・固定順位の入力規則、公開フラグのチェックボックスを設定する
 const applyNewsSheetRules = (sheet) => {
   sheet.getRange('G2:G').insertCheckboxes();
+  sheet.getRange('H2:H').setDataValidation(SpreadsheetApp.newDataValidation().requireNumberBetween(1, 9999).build());
   sheet.getRange('B2:B').setNumberFormat('yyyy-mm-dd')
     .setDataValidation(SpreadsheetApp.newDataValidation().requireDate().build());
   sheet.getRange('C2:C').setDataValidation(

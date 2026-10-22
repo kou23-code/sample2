@@ -3,7 +3,7 @@
 // news-sheet.js の関数（sheetText など）を使う。GAS のファイルの読み込み順に左右されないよう、関数の中でだけ参照する。
 // 管理画面のチェックはすり抜けられるため、シートに書き込む前に必ずこちらでも検証する。
 
-const NEWS_ADMIN_LIMITS = Object.freeze({ title: 100, body: 2000, attachmentUrl: 500 });
+const NEWS_ADMIN_LIMITS = Object.freeze({ title: 100, body: 2000, attachmentUrl: 500, order: 9999 });
 
 // 先頭が = + - @ などのセルは数式として実行されないよう ' を付ける（スプレッドシートの数式埋め込み対策）
 const escapeSheetFormula = (text) => (/^[=+\-@\t\r]/.test(text) ? `'${text}` : text);
@@ -21,10 +21,14 @@ const isAdminAttachmentUrl = (text) =>
 const categoryLabelForSheet = (categoryId) =>
   Object.keys(NEWS_SHEET_CATEGORY_IDS).find((label) => NEWS_SHEET_CATEGORY_IDS[label] === categoryId) ?? '';
 
-// タイトル・本文の文字数の誤り
-const adminLengthErrors = (title, body) => [
-  title.length > NEWS_ADMIN_LIMITS.title ? `タイトルは${NEWS_ADMIN_LIMITS.title}文字以内にしてください` : '',
-  body.length > NEWS_ADMIN_LIMITS.body ? `本文は${NEWS_ADMIN_LIMITS.body}文字以内にしてください` : '',
+// 固定順位は空欄（日付順）か、1〜9999 の整数
+const isAdminOrder = (text) => text === '' || (/^\d+$/.test(text) && Number(text) >= 1 && Number(text) <= NEWS_ADMIN_LIMITS.order);
+
+// タイトル・本文の文字数と、固定順位の誤り（value は項目名から入力値を返す関数）
+const adminOptionalErrors = (value) => [
+  value('title').length > NEWS_ADMIN_LIMITS.title ? `タイトルは${NEWS_ADMIN_LIMITS.title}文字以内にしてください` : '',
+  value('body').length > NEWS_ADMIN_LIMITS.body ? `本文は${NEWS_ADMIN_LIMITS.body}文字以内にしてください` : '',
+  isAdminOrder(value('order')) ? '' : `固定順位は1〜${NEWS_ADMIN_LIMITS.order}の整数で入力してください（空欄なら日付順）`,
 ];
 
 // 管理画面からの入力の誤りを、職員が直し方の分かる日本語で返す（誤りがなければ空配列）
@@ -34,12 +38,12 @@ const adminInputErrors = (input) => {
     isAdminDate(value('date')) ? '' : '日付は 2026-10-22 のような実在する日付にしてください',
     categoryLabelForSheet(value('category')) ? '' : 'カテゴリを選んでください',
     value('title') ? '' : 'タイトルを入力してください',
-    ...adminLengthErrors(value('title'), value('body')),
+    ...adminOptionalErrors(value),
     isAdminAttachmentUrl(value('attachmentUrl')) ? '' : '添付ファイルURLは https:// で始まるURL（500文字以内）にしてください',
   ].filter(Boolean);
 };
 
-// 入力をシートの1行（A ID／B 日付／C カテゴリ／D タイトル／E 本文／F 添付ファイルURL／G 公開フラグ）にする
+// 入力をシートの1行（A ID／B 日付／C カテゴリ／D タイトル／E 本文／F 添付ファイルURL／G 公開フラグ／H 固定順位）にする
 const adminInputToRow = (input, id) => Object.freeze([
   escapeSheetFormula(sheetText(id)),
   sheetText(input.date),
@@ -48,6 +52,7 @@ const adminInputToRow = (input, id) => Object.freeze([
   escapeSheetFormula(sheetText(input.body)),
   sheetText(input.attachmentUrl),
   input.published === true ? '公開' : '非公開',
+  sheetText(input.order) === '' ? '' : Number(sheetText(input.order)),
 ]);
 
 // 次に使うID（数字のIDの最大値＋1。数字のIDが1つも無ければ '1'）
