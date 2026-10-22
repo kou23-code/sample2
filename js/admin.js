@@ -68,11 +68,10 @@ const handleAuthFailure = (doc, result) => result.auth === false && logoutAdmin(
 
 const loadAdminList = (doc, endpoint) => {
   const body = doc.getElementById('admin-news-rows');
-  renderAdminRows(body, '<tr><td colspan="5" class="admin-table__empty">読み込んでいます…</td></tr>');
+  renderAdminRows(body, adminTableNoticeHtml('読み込んでいます…'));
   return postAdmin(endpoint, 'list').then((result) => {
     handleAuthFailure(doc, result);
-    renderAdminRows(body, result.ok ? adminNewsTableHtml(result.news ?? [], NEWS_CATEGORIES)
-      : `<tr><td colspan="5" class="admin-table__empty">${escapeHtml(result.errors[0] ?? '')}</td></tr>`);
+    renderAdminRows(body, result.ok ? adminNewsTableHtml(result.news ?? [], NEWS_CATEGORIES) : adminTableNoticeHtml(result.errors[0] ?? ''));
   });
 };
 

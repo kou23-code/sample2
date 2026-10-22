@@ -83,6 +83,11 @@
               <input type="url" id="news-attachment-url" name="attachmentUrl" inputmode="url" placeholder="https://drive.google.com/file/d/…/view">
               <p class="form-hint">すでにドライブにあるファイルを使う場合に入力します。上でファイルを選んだ場合は、ファイルが優先されます。</p>
             </div>
+            <div class="form-field">
+              <label for="news-order">固定順位<span class="optional">任意</span></label>
+              <input type="number" id="news-order" name="order" min="1" max="9999" step="1" inputmode="numeric" class="admin-order-input">
+              <p class="form-hint">数値を入れたお知らせは、日付に関係なく一覧の先頭に表示されます（1が一番上）。空欄なら日付の新しい順です。</p>
+            </div>
             <label class="choice">
               <input type="checkbox" name="published" checked>
               <span>サイトに公開する（チェックを外すと下書きとして保存）</span>
@@ -101,7 +106,7 @@
           <div class="admin-table-wrap">
             <table class="admin-table">
               <thead>
-                <tr><th scope="col">ID</th><th scope="col">日付</th><th scope="col">状態</th><th scope="col">カテゴリ</th><th scope="col">タイトル</th></tr>
+                <tr><th scope="col">ID</th><th scope="col">日付</th><th scope="col">状態</th><th scope="col">順位</th><th scope="col">カテゴリ</th><th scope="col">タイトル</th></tr>
               </thead>
               <tbody id="admin-news-rows"></tbody>
             </table>
