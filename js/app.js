@@ -7,10 +7,18 @@ const CLASS_IDS = Object.freeze(CLASSES_DATA.map((item) => item.id));
 const NEWS_ITEMS = prepareNews(NEWS_DATA, NEWS_CATEGORIES);
 const NEWS_FETCH_TIMEOUT_MS = 5000;
 
-// 誤りのあるお知らせは表示せず、直し方をコンソールに出す
-const warnNewsProblems = (entries, source) =>
+// 誤りのあるお知らせは表示せず、直し方をコンソールに出す（使えない添付URLは、添付だけ出さずに知らせる）
+const warnNewsProblems = (entries, source) => {
   findNewsProblems(entries, NEWS_CATEGORIES).forEach((problem) =>
     console.warn(`${source}のお知らせ ${problem.number}件目「${problem.title}」を表示できません：${problem.errors.join('／')}`));
+  findAttachmentProblems(entries).forEach((problem) =>
+    console.warn(`${source}のお知らせ ${problem.number}件目「${problem.title}」の添付ファイルURL「${problem.url}」は https:// で始まるURLではないため、添付を表示しません`));
+};
+
+// 添付のプレビュー画像が読み込めない場合（非公開のドライブファイルなど）は枠ごと消し、ボタンだけを残す
+// （画像の error イベントは親へ伝わらないため、document のキャプチャ段階で受け取る）
+const removeBrokenPreviews = (doc) =>
+  doc.addEventListener('error', (event) => event.target.closest?.('.news-attachment__preview')?.remove(), true);
 
 // GAS の Webアプリから取得したお知らせの配列を返す（5秒で打ち切り。応答の形が違えば失敗扱い）
 const fetchNewsEntries = (url) => {
@@ -190,6 +198,7 @@ const initSite = (doc) => {
   const config = resolveSiteConfig();
   applyCommon(doc, config);
   warnNewsProblems(NEWS_DATA, '予備データ（js/data/news-data.js）');
+  removeBrokenPreviews(doc);
   PAGE_INITIALIZERS[doc.body.dataset.page]?.(doc, config);
 };
 
