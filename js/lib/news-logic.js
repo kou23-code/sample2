@@ -53,9 +53,44 @@ const findNewsProblems = (entries, categories) =>
     .map((entry, index) => ({ number: index + 1, title: newsText(entry?.title), errors: newsEntryErrors(entry, categories) }))
     .filter((problem) => problem.errors.length > 0);
 
-// 表示用に、前後の空白を除いて凍結したお知らせを作る（body は省略可）
+// ---- 添付ファイル（GoogleドライブのプレビューURLへの変換もここで行う） ----
+
+// 添付として使える URL か（https で始まり、空白や引用符・山かっこを含まない）
+const isHttpsUrl = (url) => /^https:\/\/[^\s"'<>]+$/.test(newsText(url));
+
+// Googleドライブの共有リンク（/file/d/ID/…、open?id=ID、uc?id=ID）からファイルIDを取り出す（ドライブ以外は空文字）
+const driveFileId = (url) => {
+  const match = /^https:\/\/drive\.google\.com\/(?:file\/d\/([\w-]+)|(?:open|uc)\?(?:[^#]*&)?id=([\w-]+))/.exec(newsText(url));
+  return match ? match[1] ?? match[2] : '';
+};
+
+const isImageFileUrl = (url) => /\.(jpe?g|png|gif|webp|avif)(?:[?#]|$)/i.test(newsText(url));
+
+// 画像プレビューのURL（ドライブはサムネイル、画像ファイルはそのまま、それ以外は空文字）
+const attachmentPreviewSrc = (url) => {
+  const fileId = driveFileId(url);
+  if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+  return isImageFileUrl(url) ? newsText(url) : '';
+};
+
+// 添付ファイルURLを { href（開くURL）, previewSrc（プレビュー画像のURL。無ければ空文字） } にする（使えないURLは null）
+const newsAttachment = (url) =>
+  isHttpsUrl(url) ? Object.freeze({ href: newsText(url), previewSrc: attachmentPreviewSrc(url) }) : null;
+
+// 添付ファイルURLが書かれているのに使えないお知らせを { 番号, タイトル, URL } で返す（お知らせ自体は表示する）
+const findAttachmentProblems = (entries) =>
+  entries
+    .map((entry, index) => ({ number: index + 1, title: newsText(entry?.title), url: newsText(entry?.attachmentUrl) }))
+    .filter((problem) => problem.url !== '' && !isHttpsUrl(problem.url));
+
+// 表示用に、前後の空白を除いて凍結したお知らせを作る（id・body・attachmentUrl は省略可。使えない添付URLは空文字）
 const toNewsItem = (entry) => Object.freeze({
-  date: newsText(entry.date), category: newsText(entry.category), title: newsText(entry.title), body: newsText(entry.body),
+  id: newsText(entry.id),
+  date: newsText(entry.date),
+  category: newsText(entry.category),
+  title: newsText(entry.title),
+  body: newsText(entry.body),
+  attachmentUrl: isHttpsUrl(entry.attachmentUrl) ? newsText(entry.attachmentUrl) : '',
 });
 
 // ---- GAS の Webアプリからの取得 ----
@@ -75,5 +110,6 @@ if (typeof module === 'object' && module.exports) {
     sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa,
     newsText, isNewsDate, newsEntryErrors, findNewsProblems, toNewsItem, prepareNews,
     isNewsEndpoint, parseNewsResponse,
+    isHttpsUrl, driveFileId, attachmentPreviewSrc, newsAttachment, findAttachmentProblems,
   };
 }

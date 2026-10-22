@@ -4,16 +4,30 @@
 // ※ doGet / onEdit / setupNewsSheet は GAS から呼び出すため function 宣言にしている。
 
 const NEWS_SHEET_NAME = 'news';
-const NEWS_SHEET_HEADERS = Object.freeze(['公開', '日付', 'カテゴリ', 'タイトル', '本文', 'メモ（公開されません）']);
-const NEWS_CACHE_KEY = 'news-json-v1';
+const NEWS_SHEET_HEADERS = Object.freeze(['ID', '日付', 'カテゴリ', 'タイトル', '本文', '添付ファイルURL', '公開フラグ']);
+// 応答の形を変えたときは末尾の版数を上げ、古い形のキャッシュを使わないようにする
+const NEWS_CACHE_KEY = 'news-json-v2';
 const NEWS_CACHE_SECONDS = 300;
 // CacheService は1件100KBまで。日本語は1文字3バイトのため、文字数で余裕をもって判定する
 const NEWS_CACHE_MAX_CHARS = 30000;
 
-// 見出し行を除いたシートの全行（シートが無ければ空配列）
-const readNewsRows = () => {
+// 見出し行を含むシートの全セルの値（シートが無ければ null）
+const readNewsValues = () => {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(NEWS_SHEET_NAME);
-  return sheet ? sheet.getDataRange().getValues().slice(1) : [];
+  return sheet ? sheet.getDataRange().getValues() : null;
+};
+
+// 見出し行を除いたシートの全行（シートが無ければ空配列）
+const readNewsRows = () => (readNewsValues() ?? [[]]).slice(1);
+
+const sheetNames = () => SpreadsheetApp.getActiveSpreadsheet().getSheets().map((sheet) => sheet.getName());
+
+// 診断用：シートの有無・見出し・件数・公開されない理由（お知らせの中身は含めない。キャッシュしない）
+const buildDiagnosticsJson = (now) => {
+  const values = readNewsValues();
+  return JSON.stringify(values
+    ? { sheetFound: true, headers: values[0].map(sheetText), ...newsRowDiagnostics(values.slice(1), sheetDateText(now)) }
+    : { sheetFound: false, expectedSheetName: NEWS_SHEET_NAME, sheetNames: sheetNames() });
 };
 
 const buildNewsJson = (now) =>
@@ -32,9 +46,10 @@ const cachedNewsJson = () => {
 const jsonOutput = (text) => ContentService.createTextOutput(text).setMimeType(ContentService.MimeType.JSON);
 
 // Webアプリへの GET リクエストに応答する（失敗時もJSONで返し、サイト側は予備データを表示する）
-function doGet() {
+// URL の末尾に ?debug=1 を付けると、お知らせの代わりに診断結果を返す
+function doGet(e) {
   try {
-    return jsonOutput(cachedNewsJson());
+    return jsonOutput(e?.parameter?.debug === '1' ? buildDiagnosticsJson(new Date()) : cachedNewsJson());
   } catch (error) {
     console.error(error);
     return jsonOutput(JSON.stringify({ error: 'お知らせを読み込めませんでした' }));
@@ -46,16 +61,17 @@ function onEdit() {
   CacheService.getScriptCache().remove(NEWS_CACHE_KEY);
 }
 
-// 公開のチェックボックス、日付とカテゴリの入力規則を設定する
+// 日付とカテゴリの入力規則、公開フラグのチェックボックスを設定する
 const applyNewsSheetRules = (sheet) => {
-  sheet.getRange('A2:A').insertCheckboxes();
+  sheet.getRange('G2:G').insertCheckboxes();
   sheet.getRange('B2:B').setNumberFormat('yyyy-mm-dd')
     .setDataValidation(SpreadsheetApp.newDataValidation().requireDate().build());
   sheet.getRange('C2:C').setDataValidation(
     SpreadsheetApp.newDataValidation().requireValueInList(Object.keys(NEWS_SHEET_CATEGORY_IDS)).build());
 };
 
-// 初回だけ GASエディタから実行し、シート「news」の見出し・チェックボックス・入力規則を用意する
+// 新しくシートを作るときだけ GASエディタから実行し、シート「news」の見出し・入力規則・チェックボックスを用意する
+// ※ 公開フラグを文字（「公開」など）で入力済みのシートでは実行しないこと（G列がチェックボックスに変わるため）
 function setupNewsSheet() {
   const book = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = book.getSheetByName(NEWS_SHEET_NAME) ?? book.insertSheet(NEWS_SHEET_NAME);

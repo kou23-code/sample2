@@ -176,18 +176,22 @@
 
 | 列 | 見出し | 内容 | JSON への出力 |
 | --- | --- | --- | --- |
-| A | 公開 | チェックボックス。チェックなしは下書き | 出力しない（絞り込みのみ） |
+| A | ID | お知らせの識別子（省略可） | `id`（文字列） |
 | B | 日付 | 日付（入力規則で日付のみ） | `date`（日本時間の `YYYY-MM-DD`） |
 | C | カテゴリ | プルダウン（お知らせ／イベント／教室情報／募集） | `category`（ID に変換） |
 | D | タイトル | 必須 | `title` |
 | E | 本文 | 省略可 | `body` |
-| F | メモ | 職員どうしの連絡用 | **出力しない** |
+| F | 添付ファイルURL | 画像・PDF 等の URL（省略可） | `attachmentUrl`（シートの値のまま。Googleドライブのプレビュー用 URL への変換はサイト側で行う） |
+| G | 公開フラグ | チェックボックス、または文字（`TRUE`／`公開`／`1`／`○`／`yes`） | 出力しない（絞り込みのみ） |
 
-- 公開条件：公開にチェックがあり、日付が今日（日本時間）以前の行のみ（未来の日付は予約公開）。
-- 応答：`{ updatedAt: ISO日時, news: [{ date, category, title, body }] }`。例外時は `{ error: 'お知らせを読み込めませんでした' }`。
-- GAS 側（`gas/news-sheet.js`・純粋関数）：`sheetText`、`sheetDateText`（Date→日本時間の日付、文字列はそのまま）、`sheetCategoryId`（日本語名→ID）、`isPublishedRow`、`sheetRowToEntry`、`newsRowsToEntries`、`newsResponse`。
-- GAS 側（`gas/news-api.js`・副作用）：`doGet`（JSON を返す）、`CacheService` で5分キャッシュ（3万文字超は保存しない）、`onEdit`（シート編集でキャッシュ削除）、`setupNewsSheet`（初回に見出し・チェックボックス・入力規則を作成）。GAS から呼ぶ `doGet` / `onEdit` / `setupNewsSheet` のみ `function` 宣言とする。
-- Webアプリの公開設定：実行するユーザー「自分」、アクセスできるユーザー「全員」。シート自体は職員のみに共有する。シートには個人情報を書かない運用とし、メモ列も外部に出さない。
+- 公開条件：公開フラグ（`isPublishedFlag`）が公開を示し、日付が今日（日本時間）以前の行のみ（未来の日付は予約公開）。
+- 日付：日付型のセルは日本時間の `YYYY-MM-DD` に、文字列のセル（`2026/10/20`・`2026.1.5`・`2026-1-5`・`2026年10月20日`）は `normalizeDateText` で `YYYY-MM-DD` にそろえる。それ以外の形は「日付が読めない」として公開しない。
+- 公開されない理由（`rowSkipReason`）：`notPublished`（公開フラグなし）／`invalidDate`（日付が読めない）／`future`（未来の日付）。
+- 診断モード：Webアプリの URL に `?debug=1` を付けると、お知らせの代わりに `{ sheetFound, headers, today, rowCount, published, notPublished, invalidDate, future, notPublishedFlagSamples, invalidDateSamples }`（シートが無い場合は `{ sheetFound: false, expectedSheetName, sheetNames }`）を返す。タイトル・本文・添付URLは含めず、キャッシュもしない（`newsRowDiagnostics`）。
+- 応答：`{ updatedAt: ISO日時, news: [{ id, date, category, title, body, attachmentUrl }] }`。例外時は `{ error: 'お知らせを読み込めませんでした' }`。
+- GAS 側（`gas/news-sheet.js`・純粋関数）：`sheetText`、`sheetDateText`（Date→日本時間の日付、文字列はそのまま）、`sheetCategoryId`（日本語名→ID）、`isPublishedFlag`（公開フラグの判定）、`isPublishedRow`、`sheetRowToEntry`、`newsRowsToEntries`、`newsResponse`。
+- GAS 側（`gas/news-api.js`・副作用）：`doGet`（JSON を返す）、`CacheService` で5分キャッシュ（3万文字超は保存しない）、`onEdit`（シート編集でキャッシュ削除）、`setupNewsSheet`（新規シートのみ。見出し・入力規則・G列のチェックボックスを作成）。応答の形を変えたらキャッシュキーの版数を上げる（現在 `news-json-v2`）。GAS から呼ぶ `doGet` / `onEdit` / `setupNewsSheet` のみ `function` 宣言とする。
+- Webアプリの公開設定：実行するユーザー「自分」、アクセスできるユーザー「全員」。シート自体は職員のみに共有する。シートには個人情報を書かない運用とし、公開フラグ列は外部に出さない。添付ファイルも公開してよいものだけを置く。
 - サイト側（`js/lib/news-logic.js`・純粋関数）：`isNewsEndpoint`（`http(s)://` で始まる URL のみ true。`YOUR_GAS_WEB_APP_URL` などの仮の値は false）、`parseNewsResponse`（応答から `news` 配列を取り出す。形が違えば `null`）。
 - サイト側（`js/app.js`）：`loadNewsItems(config)` が Promise でお知らせを返す。
   - 取得先あり：`fetch`（5秒で `AbortController` により打ち切り）→ HTTP エラー・形式違い・通信失敗・タイムアウトはすべて予備データにフォールバックし、`console.warn` を出す。
@@ -195,6 +199,23 @@
   - 取得が終わるまでは HTML の「お知らせを読み込んでいます…」を表示し、終わってから一度だけ描画する（予備データからの差し替えによる表示のちらつきを避ける）。
   - お知らせ一覧の絞り込みは、取得中に押された場合も取得完了後に押された順で反映する。
 - 表示する HTML は `templates.js` でエスケープするため、シートに HTML やスクリプトが書かれても実行されない。
+
+#### 添付ファイルの表示（`attachmentUrl`）
+
+- 判定・変換はサイト側の純粋関数（`js/lib/news-logic.js`）で行う。GAS はシートの値をそのまま返す。
+  - `isHttpsUrl`：`https://` で始まり、空白・引用符・山かっこを含まない URL のみ使う（`http:`・`javascript:` 等は使わない）。
+  - `driveFileId`：Googleドライブの共有リンク（`/file/d/ID/…`・`open?id=ID`・`uc?id=ID`）からファイルIDを取り出す。
+  - `attachmentPreviewSrc`：ドライブは `https://drive.google.com/thumbnail?id=ID&sz=w800`、拡張子が jpg / jpeg / png / gif / webp / avif の URL はそのまま、それ以外はプレビューなし。
+  - `newsAttachment`：`{ href（開くURL＝元のURL）, previewSrc }` を返す（使えない URL は `null`）。
+  - `findAttachmentProblems`：添付URLが書かれているのに使えないお知らせを返す。お知らせ自体は表示し、添付だけ出さずに `console.warn` で知らせる。
+  - `toNewsItem` は `id` と `attachmentUrl`（使えない URL は空文字）も表示用データに残す。
+- 画面（`templates.js` の `newsAttachmentHtml`）：
+  - プレビューあり：画像（クリックで添付を開く。ボタンと重複するため読み上げ・Tab移動の対象外）＋「📎 添付ファイルを開く」ボタン。
+  - プレビューなし（PDF 等）：ボタンのみ。
+  - リンクは新しいタブで開く（`target="_blank" rel="noopener noreferrer"`）。画像は `loading="lazy"`・`referrerpolicy="no-referrer"`。
+  - トップの最新3件（`.news-list--compact`）はプレビューを出さずボタンのみ。
+  - プレビュー画像が読み込めない場合（非公開のドライブファイル等）は、`app.js` が document のキャプチャ段階で `error` を受け取り、プレビュー枠を削除してボタンだけを残す。
+- ドライブのファイルを添付する場合は、共有設定を「リンクを知っている全員が閲覧可」にする（そうでないとプレビューが出ず、閲覧者は開けない）。
 
 ### 5.5 教室案内（classes.html）
 
@@ -293,7 +314,7 @@
   - `browser-scripts`：全スクリプトをブラウザと同じ順で1つの実行環境に読み込み、名前の衝突がないこと、`config.js` による上書き、お知らせ取得（偽の `fetch` で成功・HTTPエラー・形式違い・未設定）を検証
   - `html-pages`：リンクの `.html` 明記・リンク先の存在・スクリプト順・ファイル名規約
   - `code-rules`：関数10行以下・`let` / `var` 不使用（対象：`js/`・`gas/`・`test/`。GAS用の `function` 宣言も含む）
-  - `gas-news-sheet`：シートの行の変換（日本時間の日付・カテゴリ名・公開条件・メモ列の除外）
+  - `gas-news-sheet`：シートの行の変換（日本時間の日付・カテゴリ名・公開フラグの判定・公開条件・ID と添付ファイルURL の出力）
   - `gas-news-api`：偽の SpreadsheetApp・CacheService・ContentService 上で `doGet`・キャッシュ・`onEdit`・エラー時の JSON を検証
 - マージ直前：ヘッドレスChromeによる画面E2E確認を、変更箇所に対して1回だけ実行する。
 
@@ -310,3 +331,6 @@
 | 2026-10-22 | デザインをグリーン系に刷新（配色・角丸・余白）、トップに仮メインビジュアル（Unsplash）を追加、各セクションにアイコンと装飾を追加。HTMLテストのスクリプト順検証を `<script>` タグに限定 |
 | 2026-10-22 | お知らせデータを freeze・id 不要の簡単な書き方に変更し、入力チェック（誤りは非表示＋警告＋テストで検出）を追加 |
 | 2026-10-22 | お知らせをスプレッドシート＋GAS の Webアプリから fetch で取得する仕組みを追加（gas/ のスクリプト・設定手順書、予備データへのフォールバック、予約公開） |
+| 2026-10-22 | スプレッドシートの列構成を確定版（A:ID／B:日付／C:カテゴリ／D:タイトル／E:本文／F:添付ファイルURL／G:公開フラグ）に変更し、GAS の応答に `id`・`attachmentUrl` を追加 |
+| 2026-10-22 | お知らせに添付ファイルの画像プレビューと「添付ファイルを開く」ボタンを追加（Googleドライブの共有リンクはサムネイルURLに変換） |
+| 2026-10-22 | GAS で文字列の日付（`2026/10/20` 等）が未来と判定され公開されない不具合を修正。`?debug=1` の診断モードを追加 |

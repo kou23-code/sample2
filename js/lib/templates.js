@@ -4,7 +4,7 @@
 const tplDeps = typeof module === 'object' && module.exports
   ? { ...require('./news-logic.js'), ...require('./class-logic.js'), ...require('./form-validate.js') }
   : {
-    formatDateJa, categoryLabel, classDisplayName, ageLabels, inquiryTypeLabel,
+    formatDateJa, categoryLabel, newsAttachment, classDisplayName, ageLabels, inquiryTypeLabel,
     classMainRows, classFeeRows, sessionRows, sessionHeading, classTargetSummary, hasMultipleSessions,
     feeSystemRows, insuranceTitle, insuranceRows, insuranceRangeText, classFeeRangeText,
   };
@@ -16,6 +16,25 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => 
 
 // ---- お知らせ ----
 
+const NEW_TAB_ATTRS = 'target="_blank" rel="noopener noreferrer"';
+
+// 添付の画像プレビュー（クリックで添付ファイルを開く。読み込めない場合は app.js が枠ごと消す）
+const attachmentPreviewHtml = (attachment) =>
+  attachment.previewSrc
+    ? `<a class="news-attachment__preview" href="${escapeHtml(attachment.href)}" ${NEW_TAB_ATTRS} tabindex="-1" aria-hidden="true">
+        <img class="news-attachment__image" src="${escapeHtml(attachment.previewSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>`
+    : '';
+
+// 添付ファイルがあるお知らせだけ、画像プレビューと「添付ファイルを開く」ボタンを付ける
+const newsAttachmentHtml = (item) => {
+  const attachment = tplDeps.newsAttachment(item.attachmentUrl);
+  return attachment ? `
+    <div class="news-attachment">${attachmentPreviewHtml(attachment)}
+      <a class="button button--outline news-attachment__link" href="${escapeHtml(attachment.href)}" ${NEW_TAB_ATTRS}>
+        <span aria-hidden="true">📎</span>添付ファイルを開く<span class="visually-hidden">（${escapeHtml(item.title)}・新しいタブで開きます）</span></a>
+    </div>` : '';
+};
+
 const newsItemHtml = (item, categories) => `
   <li class="news-item">
     <div class="news-item__meta">
@@ -23,7 +42,7 @@ const newsItemHtml = (item, categories) => `
       <span class="badge badge--${escapeHtml(item.category)}">${escapeHtml(tplDeps.categoryLabel(categories, item.category))}</span>
     </div>
     <h3 class="news-item__title">${escapeHtml(item.title)}</h3>
-    <p class="news-item__body">${escapeHtml(item.body)}</p>
+    <p class="news-item__body">${escapeHtml(item.body)}</p>${newsAttachmentHtml(item)}
   </li>`;
 
 const newsListHtml = (news, categories) =>

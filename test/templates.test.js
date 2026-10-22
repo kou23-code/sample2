@@ -129,3 +129,29 @@ test('希望教室なしは「指定なし」', () => {
   const rows = tpl.completionRows({ inquiryType: 'other', classId: '' }, CLASSES_DATA);
   assert.deepEqual(rows[1], ['希望教室', '指定なし']);
 });
+
+// ---- お知らせの添付ファイル ----
+
+const newsWith = (attachmentUrl) => ({ date: '2026-10-15', category: 'event', title: '体験会<案内>', body: '', attachmentUrl });
+
+test('添付が無いお知らせには添付の表示を付けない', () => {
+  assert.doesNotMatch(tpl.newsListHtml([newsWith('')], NEWS_CATEGORIES), /news-attachment/);
+});
+
+test('ドライブの添付はサムネイルのプレビューと、元の共有リンクを新しいタブで開くボタンを表示する', () => {
+  const html = tpl.newsListHtml([newsWith('https://drive.google.com/file/d/abc123/view?usp=sharing')], NEWS_CATEGORIES);
+  assert.match(html, /<img class="news-attachment__image" src="https:\/\/drive\.google\.com\/thumbnail\?id=abc123&amp;sz=w800"/);
+  assert.match(html, /href="https:\/\/drive\.google\.com\/file\/d\/abc123\/view\?usp=sharing" target="_blank" rel="noopener noreferrer">/);
+  assert.match(html, /添付ファイルを開く<span class="visually-hidden">（体験会&lt;案内&gt;・新しいタブで開きます）/);
+});
+
+test('画像以外の添付はボタンだけを表示し、プレビューは付けない', () => {
+  const html = tpl.newsListHtml([newsWith('https://example.com/guide.pdf')], NEWS_CATEGORIES);
+  assert.match(html, /添付ファイルを開く/);
+  assert.doesNotMatch(html, /<img/);
+});
+
+test('https 以外の添付URLはリンクにしない', () => {
+  ['javascript:alert(1)', 'http://example.com/a.png'].forEach((url) =>
+    assert.doesNotMatch(tpl.newsListHtml([newsWith(url)], NEWS_CATEGORIES), /news-attachment|javascript:/, url));
+});

@@ -7,6 +7,8 @@
 //   - category … 'info'（お知らせ）／'event'（イベント）／'class'（教室情報）／'recruit'（募集）のいずれか
 //   - title    … タイトル（必須）
 //   - body     … 本文（一覧ページに表示。省略可）
+//   - attachmentUrl … 添付ファイルのURL（https:// で始まるもの。省略可）。画像はプレビュー、それ以外は「添付ファイルを開く」ボタンを表示
+//   - id       … お知らせの識別子（省略可）
 //   書き間違いのあるお知らせは画面に表示されず、`npm test` やブラウザのコンソールで誤りの内容を確認できます。
 
 const NEWS_CATEGORIES = Object.freeze([
