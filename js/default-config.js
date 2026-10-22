@@ -11,6 +11,8 @@ const DEFAULT_CONFIG = Object.freeze({
   copyrightYear: '2026',
   // フォーム送信先（外部フォームサービスのURL）。空の場合は送信せず完了表示のみ行う
   formEndpoint: '',
+  // お知らせの取得先（GAS の Webアプリの URL。末尾が /exec）。空の場合は js/data/news-data.js を表示する
+  newsEndpoint: '',
 });
 
 if (typeof module === 'object' && module.exports) {

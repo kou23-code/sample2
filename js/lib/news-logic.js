@@ -58,6 +58,14 @@ const toNewsItem = (entry) => Object.freeze({
   date: newsText(entry.date), category: newsText(entry.category), title: newsText(entry.title), body: newsText(entry.body),
 });
 
+// ---- GAS の Webアプリからの取得 ----
+
+// 取得先として使える URL か（未設定や 'YOUR_GAS_WEB_APP_URL' のような仮の値は false）
+const isNewsEndpoint = (url) => /^https?:\/\/\S+$/.test(newsText(url));
+
+// Webアプリの応答 { updatedAt, news: [...] } からお知らせの配列を取り出す（形が違えば null）
+const parseNewsResponse = (json) => (Array.isArray(json?.news) ? json.news : null);
+
 // 誤りのないお知らせだけを表示用に整えた凍結配列を返す
 const prepareNews = (entries, categories) =>
   Object.freeze(entries.filter((entry) => newsEntryErrors(entry, categories).length === 0).map(toNewsItem));
@@ -66,5 +74,6 @@ if (typeof module === 'object' && module.exports) {
   module.exports = {
     sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa,
     newsText, isNewsDate, newsEntryErrors, findNewsProblems, toNewsItem, prepareNews,
+    isNewsEndpoint, parseNewsResponse,
   };
 }

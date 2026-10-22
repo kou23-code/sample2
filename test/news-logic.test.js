@@ -4,6 +4,7 @@ const { NEWS_CATEGORIES, NEWS_DATA } = require('../js/data/news-data.js');
 const {
   sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa,
   isNewsDate, newsEntryErrors, findNewsProblems, toNewsItem, prepareNews,
+  isNewsEndpoint, parseNewsResponse,
 } = require('../js/lib/news-logic.js');
 
 const sample = [
@@ -98,4 +99,18 @@ test('誤りのあるお知らせを除いて表示用に整え、元の配列�
 
 test('お知らせデータ（js/data/news-data.js）に入力の誤りがない', () => {
   assert.deepEqual(findNewsProblems(NEWS_DATA, NEWS_CATEGORIES), []);
+});
+
+test('http(s) で始まる URL だけを取得先として使い、未設定や仮の値は使わない', () => {
+  assert.equal(isNewsEndpoint('https://script.google.com/macros/s/abc/exec'), true);
+  assert.equal(isNewsEndpoint(' http://localhost:8080/news '), true);
+  ['', undefined, 'YOUR_GAS_WEB_APP_URL', 'javascript:alert(1)', 'https://'].forEach((url) =>
+    assert.equal(isNewsEndpoint(url), false, String(url)));
+});
+
+test('Webアプリの応答からお知らせの配列を取り出し、形が違えば null を返す', () => {
+  const news = [{ date: '2026-10-15', category: 'info', title: 'a' }];
+  assert.equal(parseNewsResponse({ updatedAt: 'x', news }), news);
+  [null, undefined, {}, { news: 'x' }, { error: '読み込めませんでした' }, []].forEach((json) =>
+    assert.equal(parseNewsResponse(json), null, JSON.stringify(json)));
 });

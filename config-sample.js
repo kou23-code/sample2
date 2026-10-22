@@ -7,4 +7,6 @@ const SITE_CONFIG = {
   address: '架空県サンプル市1-1-1',
   tel: '000-111-2222',
   telHours: '受付：月〜金 10:00〜16:00',
+  // GAS の Webアプリの URL に置き換える（手順は gas/README.md）。仮の値のままなら取得しない
+  newsEndpoint: 'YOUR_GAS_WEB_APP_URL',
 };
