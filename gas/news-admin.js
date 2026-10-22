@@ -103,7 +103,7 @@ const adminFileErrors = (file) => {
 
 // ドライブに保存するファイル名（先頭に日付を付け、ファイル名に使えない文字を _ にし、名前は100文字まで）
 const adminFileName = (name, date) =>
-  `${date}_${sheetText(name).replace(/[\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 100) || 'attachment'}`;
+  `${date}_${sheetText(name).replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 100) || 'attachment'}`;
 
 // ---- リクエスト・認証 ----
 
