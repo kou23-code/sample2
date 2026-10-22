@@ -28,7 +28,7 @@ const fakeGas = (sheetRows) => {
   const sheet = sheetRows && { getDataRange: () => ({ getValues: () => sheetRows }) };
   return {
     cache, CacheService: fakeCacheService(cache), console: { error: () => {} },
-    SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => sheet }) },
+    SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => sheet, getSheets: () => [{ getName: () => 'シート1' }] }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (text) => ({ text, setMimeType: (type) => ({ text, type }) }) },
   };
 };
@@ -71,4 +71,20 @@ test('シートの読み取りに失敗しても JSON のエラーを返す', ()
 
 test('シート初期設定の見出しは確定した7列（A:ID〜G:公開フラグ）と一致している', () => {
   assert.deepEqual([...vm.runInContext('NEWS_SHEET_HEADERS', loadGas(ROWS))], HEADER);
+});
+
+test('?debug=1 では見出し・件数・公開されない理由を返し、お知らせの中身は含めない', () => {
+  const context = loadGas(ROWS);
+  const result = JSON.parse(vm.runInContext("doGet({ parameter: { debug: '1' } })", context).text);
+  assert.equal(result.sheetFound, true);
+  assert.deepEqual(result.headers, HEADER);
+  assert.deepEqual([result.rowCount, result.published, result.notPublished, result.future], [3, 1, 1, 1]);
+  assert.equal('news' in result, false);
+  assert.doesNotMatch(JSON.stringify(result), /公開中|n-001|drive\.google/);
+  assert.equal(context.cache.size, 0);
+});
+
+test('?debug=1 でシート「news」が無ければ、実際のシート名の一覧を返す', () => {
+  const result = JSON.parse(vm.runInContext("doGet({ parameter: { debug: '1' } })", loadGas(null)).text);
+  assert.deepEqual(result, { sheetFound: false, expectedSheetName: 'news', sheetNames: ['シート1'] });
 });
