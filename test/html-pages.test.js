@@ -63,3 +63,31 @@ test('ファイル名・フォルダ名は半角英数字とハイフンのみ�
     .flatMap((entry) => (entry.isDirectory() ? [entry.name, ...walk(path.join(dir, entry.name))] : [entry.name]));
   walk(ROOT).forEach((name) => assert.match(name, /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*$/, name));
 });
+
+// ---- お知らせ管理画面（admin.html） ----
+
+const ADMIN_SCRIPTS = [...SCRIPTS.slice(0, -1), './js/lib/admin-logic.js', './js/admin.js'];
+
+test('admin.html は検索エンジンに載せず、管理画面用の順でスクリプトを読み込む（app.js は読み込まない）', () => {
+  const html = readPage('admin.html');
+  assert.match(html, /<meta name="robots" content="noindex, nofollow">/);
+  assert.deepEqual(scriptSrcs(html), ADMIN_SCRIPTS);
+  assert.equal(/data-nav="/.test(html), false);
+});
+
+test('admin.html のリンクは .html まで明記し、読み込むファイルが存在する（config.js を除く）', () => {
+  const html = readPage('admin.html');
+  attrValues(html, 'href').filter((url) => !isExternal(url)).forEach((url) => assert.match(stripQuery(url), /^\.\/[a-z0-9\-/]+\.(html|css|js)$/, url));
+  scriptSrcs(html).filter((url) => url !== './config.js').forEach((url) => assert.ok(fs.existsSync(path.join(ROOT, url)), url));
+});
+
+test('公開ページのどこからも admin.html へリンクしない', () => {
+  PAGES.forEach((page) => assert.doesNotMatch(readPage(page), /admin\.html/, page));
+});
+
+test('admin.html のフォームは日付・カテゴリ・タイトル・本文・ファイル・URL・公開の入力欄を持つ', () => {
+  const html = readPage('admin.html');
+  ['date', 'category', 'title', 'body', 'file', 'attachmentUrl', 'published', 'password'].forEach((name) =>
+    assert.match(html, new RegExp(`name="${name}"`), name));
+  assert.match(html, /type="file"[^>]*accept="application\/pdf,image\/jpeg,image\/png,image\/gif,image\/webp"/);
+});
