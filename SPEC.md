@@ -323,6 +323,13 @@
 #### 通信（admin.html → GAS doPost）
 
 - `fetch` の POST で、本文は JSON の文字列 `{ action, password, data }`（`Content-Type: text/plain` の単純なリクエストにして事前確認の通信を避ける）。応答は `{ ok, errors[], ... }`（`normalizeAdminResponse` で形をそろえる）。60秒で打ち切る。
+- エラーの原因の特定（`js/lib/admin-logic.js`・純粋関数）：応答は文字列で受け取り、`parseAdminHttpResponse` で次のように区別する。失敗した場合は `{ ok: false, errors, detail }` を返し、画面には `adminErrorLines` で「詳細：…」の行を付けて表示し、`console.error` にも `[お知らせ管理] 「操作名」に失敗しました` として出す。
+  - HTTP エラー：「サーバーがエラーを返しました（HTTP 状態コード）」＋本文の先頭（`responseSnippet`：HTML のタグを除き300文字まで）。
+  - JSON でない応答（Google のログイン画面・エラーページなど）：「応答が JSON ではありませんでした」＋本文の先頭。
+  - 通信の失敗（`describeFetchError`）：`AbortError` はタイムアウト、`TypeError` は通信不可（ネットワーク・URL の誤り・CORS）、それ以外は予期しないエラー。詳細は「エラー名: メッセージ」。
+  - GAS が返したエラー：`errors` と、あれば `detail` をそのまま表示する。
+  - 送信後の画面処理やファイルの読み込みで起きたエラー（`reportSubmitError`）：エラー名で文言を分け、詳細を表示して `console.error` に出す。
+- GAS の `doPost` で例外が起きた場合は、`{ ok: false, errors: [「処理中にエラーが発生しました…」], detail: 「例外の種類: メッセージ」（300文字まで、`adminErrorDetail`） }` を返す。例外は GAS の「実行数」にも記録される。
 
 | action | 内容 | 応答 |
 | --- | --- | --- |
@@ -381,3 +388,4 @@
 | 2026-10-22 | GAS で文字列の日付（`2026/10/20` 等）が未来と判定され公開されない不具合を修正。`?debug=1` の診断モードを追加 |
 | 2026-10-22 | お知らせ管理画面（admin.html）を追加：共通パスワード（スクリプト プロパティ）でログインし、お知らせの追加・一覧表示、添付ファイルのドライブ保存に対応 |
 | 2026-10-22 | スプレッドシートの H列に「固定順位」を追加し、数値があるお知らせを先に昇順、ないものを日付の新しい順で表示。管理画面に固定順位の入力欄と一覧の順位列を追加 |
+| 2026-10-22 | 管理画面の通信エラーの原因（HTTP エラー・JSON でない応答・通信失敗・GAS の例外の詳細）を画面と console.error に出すよう改修 |
