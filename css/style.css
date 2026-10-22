@@ -405,7 +405,7 @@ fieldset[aria-invalid="true"] .choice { border-color: var(--color-error); }
 .admin-page { padding-bottom: 0; }
 .container--narrow { max-width: 760px; }
 .admin-badge { padding: 4px 14px; border-radius: 999px; background: var(--color-green-soft); color: var(--color-primary-dark); font-weight: 700; font-size: 0.9rem; }
-.form-row { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.form-row { display: grid; gap: 24px; align-items: start; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
 .form input[type="password"], .form input[type="date"], .form input[type="url"] {
   width: 100%; min-height: 52px; padding: 10px 14px; font: inherit; color: var(--color-text);
   background: #fff; border: 2px solid var(--color-border); border-radius: var(--radius-small);
@@ -421,7 +421,7 @@ fieldset[aria-invalid="true"] .choice { border-color: var(--color-error); }
 .admin-toolbar__button { min-height: 44px; padding: 6px 18px; font-size: 0.95rem; }
 /* 一覧の表は狭い画面では横にスクロールさせ、ページ全体は横にはみ出さない */
 .admin-table-wrap { overflow-x: auto; background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); }
-.admin-table { width: 100%; min-width: 560px; border-collapse: collapse; }
+.admin-table { width: 100%; min-width: 680px; border-collapse: collapse; }
 .admin-table th, .admin-table td { padding: 12px 14px; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: top; }
 .admin-table thead th { background: var(--color-primary-soft); color: var(--color-primary-dark); white-space: nowrap; }
 .admin-table tbody tr:last-child td { border-bottom: none; }
