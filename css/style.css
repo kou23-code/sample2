@@ -1,27 +1,29 @@
 /* =========================================================
    あおぞら総合型地域スポーツクラブ 共通スタイル
    方針：大きめの文字・十分なコントラスト・広いタップ領域
+   配色：芝生や木々を思わせるフォレストグリーン＋若草色
    ========================================================= */
 
 :root {
-  --color-primary: #0a66a8;
-  --color-primary-dark: #084b7c;
-  --color-primary-soft: #e6f2fb;
-  --color-green: #1f7a4a;
-  --color-green-soft: #e7f5ec;
+  --color-primary: #2a7348;
+  --color-primary-dark: #1e5a38;
+  --color-primary-soft: #e9f5e6;
+  --color-green: #3f7a1f;
+  --color-green-soft: #eef6e2;
+  --color-leaf: #8cc63f;
   --color-accent: #c2410c;
   --color-accent-dark: #9a3412;
-  --color-bg: #f6fafd;
+  --color-bg: #f6faf1;
   --color-surface: #ffffff;
-  --color-text: #1d2a36;
-  --color-muted: #4a5a68;
-  --color-border: #c9d8e4;
+  --color-text: #1f2d24;
+  --color-muted: #4b5e51;
+  --color-border: #cfe2c8;
   --color-error: #b42318;
   --color-error-soft: #fdecea;
   --color-focus: #f59e0b;
   --radius: 14px;
   --radius-small: 8px;
-  --shadow: 0 4px 16px rgba(10, 60, 100, 0.08);
+  --shadow: 0 6px 20px rgba(40, 90, 50, 0.09);
   --container: 1080px;
   --font-base: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Noto Sans JP", "Meiryo", sans-serif;
 }
@@ -76,7 +78,7 @@ p { margin: 0 0 1em; }
 .brand:hover { color: var(--color-primary-dark); }
 .brand__mark {
   flex: none; width: 44px; height: 44px; border-radius: 50%;
-  background: linear-gradient(135deg, #4fb3ea 0%, var(--color-primary) 60%, var(--color-green) 100%);
+  background: linear-gradient(135deg, var(--color-leaf) 0%, var(--color-primary) 65%, var(--color-primary-dark) 100%);
   display: grid; place-items: center; color: #fff; font-size: 1.2rem;
 }
 .brand__name { font-size: 1.05rem; line-height: 1.4; }
@@ -114,16 +116,16 @@ p { margin: 0 0 1em; }
 
 .hero {
   position: relative; overflow: hidden; padding: 48px 0 56px;
-  background: linear-gradient(160deg, #d8eefb 0%, #eef8f1 70%, #fff8ec 100%);
+  background: linear-gradient(160deg, #e3f3d8 0%, #f1f8e9 70%, #fff8ec 100%);
 }
 .hero::before, .hero::after { content: ""; position: absolute; border-radius: 50%; pointer-events: none; }
-.hero::before { width: 320px; height: 320px; right: -80px; top: -120px; background: rgba(79, 179, 234, 0.25); }
-.hero::after { width: 200px; height: 200px; left: -60px; bottom: -90px; background: rgba(31, 122, 74, 0.15); }
+.hero::before { width: 320px; height: 320px; right: -80px; top: -120px; background: rgba(140, 198, 63, 0.22); }
+.hero::after { width: 200px; height: 200px; left: -60px; bottom: -90px; background: rgba(42, 115, 72, 0.14); }
 .hero .container { position: relative; z-index: 1; }
 .hero__lead { font-size: 1.1rem; max-width: 40em; }
 .hero__eyebrow { display: inline-block; margin-bottom: 12px; padding: 2px 14px; border-radius: 999px; background: #fff; color: var(--color-green); font-weight: 700; font-size: 0.9rem; }
 
-.page-header { padding: 32px 0 24px; background: linear-gradient(160deg, #d8eefb 0%, #eef8f1 100%); }
+.page-header { padding: 32px 0 24px; background: linear-gradient(160deg, #e3f3d8 0%, #f4faee 100%); }
 .page-header h1 { margin-bottom: 0.3em; }
 .page-header p { margin: 0; color: var(--color-muted); }
 
@@ -281,7 +283,7 @@ p { margin: 0 0 1em; }
 
 .map-placeholder {
   display: grid; place-items: center; min-height: 200px; margin-top: 16px; padding: 16px; text-align: center;
-  border-radius: var(--radius); background: repeating-linear-gradient(45deg, #eef5fa, #eef5fa 12px, #e3eef6 12px, #e3eef6 24px); color: var(--color-muted);
+  border-radius: var(--radius); background: repeating-linear-gradient(45deg, #f0f7ea, #f0f7ea 12px, #e5f0dc 12px, #e5f0dc 24px); color: var(--color-muted);
 }
 
 /* ---------- フォーム ---------- */
