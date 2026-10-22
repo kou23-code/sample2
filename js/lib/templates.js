@@ -4,7 +4,7 @@
 const tplDeps = typeof module === 'object' && module.exports
   ? { ...require('./news-logic.js'), ...require('./class-logic.js'), ...require('./form-validate.js') }
   : {
-    formatDateJa, categoryLabel, newsAttachment, classDisplayName, ageLabels, inquiryTypeLabel,
+    formatDateJa, categoryLabel, newsAttachment, hasNewsOrder, newsAnchorId, classDisplayName, ageLabels, inquiryTypeLabel,
     classMainRows, classFeeRows, sessionRows, sessionHeading, classTargetSummary, hasMultipleSessions,
     feeSystemRows, insuranceTitle, insuranceRows, insuranceRangeText, classFeeRangeText,
   };
@@ -18,37 +18,58 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => 
 
 const NEW_TAB_ATTRS = 'target="_blank" rel="noopener noreferrer"';
 
-// 添付の画像プレビュー（クリックで添付ファイルを開く。読み込めない場合は app.js が枠ごと消す）
-const attachmentPreviewHtml = (attachment) =>
-  attachment.previewSrc
-    ? `<a class="news-attachment__preview" href="${escapeHtml(attachment.href)}" ${NEW_TAB_ATTRS} tabindex="-1" aria-hidden="true">
-        <img class="news-attachment__image" src="${escapeHtml(attachment.previewSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>`
-    : '';
+const NEWS_EMPTY_HTML = '<li class="empty-message">該当するお知らせはありません。</li>';
 
-// 添付ファイルがあるお知らせだけ、画像プレビューと「添付ファイルを開く」ボタンを付ける
+// 一覧の1行：日付・カテゴリ・固定・タイトル・添付ありのアイコン（トップとお知らせ一覧で共通）
+const newsRowHtml = (item, categories) => `
+  <span class="news-row__meta">
+    <time datetime="${escapeHtml(item.date)}">${escapeHtml(tplDeps.formatDateJa(item.date))}</time>
+    <span class="badge badge--${escapeHtml(item.category)}">${escapeHtml(tplDeps.categoryLabel(categories, item.category))}</span>${
+  tplDeps.hasNewsOrder(item) ? '<span class="badge badge--pinned">固定</span>' : ''}
+  </span>
+  <span class="news-row__title">${escapeHtml(item.title)}</span>${
+  tplDeps.newsAttachment(item.attachmentUrl) ? '<span class="news-row__clip" role="img" aria-label="添付ファイルあり">📎</span>' : ''}`;
+
+// 添付の画像（チラシ）を本文の幅いっぱいに表示する（クリックで元のファイルを開く。読み込めない場合は app.js が消す）
+const newsFigureHtml = (attachment, title) =>
+  attachment.previewSrc ? `
+    <figure class="news-figure"><a href="${escapeHtml(attachment.href)}" ${NEW_TAB_ATTRS} tabindex="-1" aria-hidden="true">
+      <img class="news-figure__image" src="${escapeHtml(attachment.previewSrc)}" alt="${escapeHtml(title)}の添付画像" loading="lazy" referrerpolicy="no-referrer"></a>
+    </figure>` : '';
+
+// 添付ファイルがあるお知らせだけ、大きな画像と大きな「ファイルを開く」ボタンを付ける
 const newsAttachmentHtml = (item) => {
   const attachment = tplDeps.newsAttachment(item.attachmentUrl);
-  return attachment ? `
-    <div class="news-attachment">${attachmentPreviewHtml(attachment)}
-      <a class="button button--outline news-attachment__link" href="${escapeHtml(attachment.href)}" ${NEW_TAB_ATTRS}>
-        <span aria-hidden="true">📎</span>添付ファイルを開く<span class="visually-hidden">（${escapeHtml(item.title)}・新しいタブで開きます）</span></a>
-    </div>` : '';
+  return attachment ? `${newsFigureHtml(attachment, item.title)}
+    <a class="button button--primary news-file-button" href="${escapeHtml(attachment.href)}" ${NEW_TAB_ATTRS}>
+      <span aria-hidden="true">📄</span>ファイルを開く<span class="visually-hidden">（${escapeHtml(item.title)}・新しいタブで開きます）</span></a>` : '';
+};
+
+// 行を押すと、その下に本文と添付が記事のように開く（本文も添付も無いお知らせは開かない1行だけにする）
+const newsEntryHtml = (item, categories) => {
+  const detail = `${item.body ? `<p class="news-detail__body">${escapeHtml(item.body)}</p>` : ''}${newsAttachmentHtml(item)}`;
+  return detail ? `
+    <details class="news-entry">
+      <summary class="news-row">${newsRowHtml(item, categories)}<span class="news-row__toggle" aria-hidden="true"></span></summary>
+      <div class="news-detail">${detail}</div>
+    </details>` : `<div class="news-row news-row--static">${newsRowHtml(item, categories)}</div>`;
 };
 
 const newsItemHtml = (item, categories) => `
-  <li class="news-item">
-    <div class="news-item__meta">
-      <time datetime="${escapeHtml(item.date)}">${escapeHtml(tplDeps.formatDateJa(item.date))}</time>
-      <span class="badge badge--${escapeHtml(item.category)}">${escapeHtml(tplDeps.categoryLabel(categories, item.category))}</span>
-    </div>
-    <h3 class="news-item__title">${escapeHtml(item.title)}</h3>
-    <p class="news-item__body">${escapeHtml(item.body)}</p>${newsAttachmentHtml(item)}
+  <li class="news-item" id="${escapeHtml(tplDeps.newsAnchorId(item))}">${newsEntryHtml(item, categories)}
   </li>`;
 
 const newsListHtml = (news, categories) =>
-  news.length === 0
-    ? '<li class="empty-message">該当するお知らせはありません。</li>'
-    : news.map((item) => newsItemHtml(item, categories)).join('');
+  news.length === 0 ? NEWS_EMPTY_HTML : news.map((item) => newsItemHtml(item, categories)).join('');
+
+// トップの最新お知らせ：1行ずつ、お知らせ一覧の該当記事（開いた状態）へのリンクにする
+const newsLinkItemHtml = (item, categories) => `
+  <li class="news-item">
+    <a class="news-row" href="./news.html#${encodeURIComponent(tplDeps.newsAnchorId(item))}">${newsRowHtml(item, categories)}<span class="news-row__arrow" aria-hidden="true">›</span></a>
+  </li>`;
+
+const newsLinkListHtml = (news, categories) =>
+  news.length === 0 ? NEWS_EMPTY_HTML : news.map((item) => newsLinkItemHtml(item, categories)).join('');
 
 // ---- 絞り込みボタン ----
 
@@ -183,7 +204,7 @@ const errorSummaryText = (count) =>
 
 if (typeof module === 'object' && module.exports) {
   module.exports = {
-    escapeHtml, newsListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml, feeSystemHtml, insuranceHtml, feeInfoHtml,
+    escapeHtml, newsListHtml, newsLinkListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml, feeSystemHtml, insuranceHtml, feeInfoHtml,
     classOptionsHtml, inquiryTypeRadiosHtml, completionRows, completionTableHtml,
     resultCountText, errorSummaryText,
   };

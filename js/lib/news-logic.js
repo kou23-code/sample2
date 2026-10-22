@@ -97,13 +97,23 @@ const isImageFileUrl = (url) => /\.(jpe?g|png|gif|webp|avif)(?:[?#]|$)/i.test(ne
 // 画像プレビューのURL（ドライブはサムネイル、画像ファイルはそのまま、それ以外は空文字）
 const attachmentPreviewSrc = (url) => {
   const fileId = driveFileId(url);
-  if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+  if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`;
   return isImageFileUrl(url) ? newsText(url) : '';
 };
 
 // 添付ファイルURLを { href（開くURL）, previewSrc（プレビュー画像のURL。無ければ空文字） } にする（使えないURLは null）
 const newsAttachment = (url) =>
   isHttpsUrl(url) ? Object.freeze({ href: newsText(url), previewSrc: attachmentPreviewSrc(url) }) : null;
+
+// ---- 一覧から詳細へのリンク ----
+
+// 文字列から作る短い英数字（同じ文字列なら常に同じ値。ID の無いお知らせのアンカーに使う）
+const shortHash = (text) =>
+  [...String(text)].reduce((hash, char) => (Math.imul(hash, 31) + char.codePointAt(0)) >>> 0, 7).toString(36);
+
+// お知らせ一覧で各お知らせに付ける id 属性（ID が英数字ならそれを使い、無ければ日付とタイトルから作る）
+const newsAnchorId = (item) =>
+  /^[A-Za-z0-9_-]+$/.test(newsText(item.id)) ? `news-${newsText(item.id)}` : `news-${newsText(item.date)}-${shortHash(newsText(item.title))}`;
 
 // 添付ファイルURLが書かれているのに使えないお知らせを { 番号, タイトル, URL } で返す（お知らせ自体は表示する）
 const findAttachmentProblems = (entries) =>
@@ -139,6 +149,6 @@ if (typeof module === 'object' && module.exports) {
     sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa, newsOrder, sortNewsForDisplay,
     newsText, isNewsDate, newsEntryErrors, findNewsProblems, toNewsItem, prepareNews,
     isNewsEndpoint, parseNewsResponse,
-    isHttpsUrl, driveFileId, attachmentPreviewSrc, newsAttachment, findAttachmentProblems,
+    isHttpsUrl, driveFileId, attachmentPreviewSrc, newsAttachment, findAttachmentProblems, hasNewsOrder, newsAnchorId,
   };
 }

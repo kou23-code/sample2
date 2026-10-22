@@ -5,7 +5,7 @@ const {
   sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa, newsOrder, sortNewsForDisplay,
   isNewsDate, newsEntryErrors, findNewsProblems, toNewsItem, prepareNews,
   isNewsEndpoint, parseNewsResponse,
-  isHttpsUrl, driveFileId, attachmentPreviewSrc, newsAttachment, findAttachmentProblems,
+  isHttpsUrl, driveFileId, attachmentPreviewSrc, newsAttachment, findAttachmentProblems, hasNewsOrder, newsAnchorId,
 } = require('../js/lib/news-logic.js');
 
 const sample = [
@@ -125,7 +125,7 @@ test('Webアプリの応答からお知らせの配列を取り出し、形が�
 // ---- 添付ファイル ----
 
 const DRIVE_ID = '1AbC_d-EfG';
-const THUMBNAIL = `https://drive.google.com/thumbnail?id=${DRIVE_ID}&sz=w800`;
+const THUMBNAIL = `https://drive.google.com/thumbnail?id=${DRIVE_ID}&sz=w1600`;
 
 test('https で始まり、空白・引用符・山かっこを含まない URL だけを添付として使う', () => {
   assert.equal(isHttpsUrl(' https://example.com/a.pdf '), true);
@@ -192,4 +192,18 @@ test('固定順位が数値でないお知らせは誤りとして知らせ、�
 test('表示用データは固定順位を数値で残す', () => {
   assert.equal(toNewsItem({ ...okEntry, order: '2' }).order, 2);
   assert.deepEqual(prepareNews([ordered('x', '2026-10-01', 5)], NEWS_CATEGORIES).map((n) => n.order), [5]);
+});
+
+test('固定順位が数値のお知らせだけを「固定」とみなす', () => {
+  assert.equal(hasNewsOrder({ order: 1 }), true);
+  [null, undefined, '1', NaN].forEach((order) => assert.equal(hasNewsOrder({ order }), false, String(order)));
+});
+
+test('アンカー用の id は英数字の ID ならそのまま使い、無ければ日付とタイトルから同じ値を作る', () => {
+  assert.equal(newsAnchorId({ id: '12', date: '2026-10-01', title: 'a' }), 'news-12');
+  const noId = newsAnchorId({ id: '', date: '2026-10-01', title: '秋のフェスタ' });
+  assert.match(noId, /^news-2026-10-01-[0-9a-z]+$/);
+  assert.equal(newsAnchorId({ date: '2026-10-01', title: '秋のフェスタ' }), noId);
+  assert.notEqual(newsAnchorId({ date: '2026-10-01', title: '春のフェスタ' }), noId);
+  assert.match(newsAnchorId({ id: 'a b"<', date: '2026-10-01', title: 'x' }), /^news-2026-10-01-/);
 });
