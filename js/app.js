@@ -3,13 +3,39 @@
 
 const CLASS_IDS = Object.freeze(CLASSES_DATA.map((item) => item.id));
 
-// 職員が書いたお知らせのうち、誤りのないものだけを表示に使う
+// 予備のお知らせ（js/data/news-data.js）のうち、誤りのないもの。取得先が未設定・取得失敗のときに表示する
 const NEWS_ITEMS = prepareNews(NEWS_DATA, NEWS_CATEGORIES);
+const NEWS_FETCH_TIMEOUT_MS = 5000;
 
 // 誤りのあるお知らせは表示せず、直し方をコンソールに出す
-const warnNewsProblems = () =>
-  findNewsProblems(NEWS_DATA, NEWS_CATEGORIES).forEach((problem) =>
-    console.warn(`お知らせ ${problem.number}件目「${problem.title}」を表示できません：${problem.errors.join('／')}`));
+const warnNewsProblems = (entries, source) =>
+  findNewsProblems(entries, NEWS_CATEGORIES).forEach((problem) =>
+    console.warn(`${source}のお知らせ ${problem.number}件目「${problem.title}」を表示できません：${problem.errors.join('／')}`));
+
+// GAS の Webアプリから取得したお知らせの配列を返す（5秒で打ち切り。応答の形が違えば失敗扱い）
+const fetchNewsEntries = (url) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), NEWS_FETCH_TIMEOUT_MS);
+  return fetch(url, { signal: controller.signal })
+    .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
+    .then((json) => parseNewsResponse(json) ?? Promise.reject(new Error('応答の形式が違います')))
+    .finally(() => clearTimeout(timer));
+};
+
+const fetchRemoteNews = (url) =>
+  fetchNewsEntries(url).then((entries) => {
+    warnNewsProblems(entries, 'スプレッドシート');
+    return prepareNews(entries, NEWS_CATEGORIES);
+  });
+
+// 取得先が設定されていれば Webアプリから取得し、未設定・失敗時は予備のお知らせを返す
+const loadNewsItems = (config) =>
+  isNewsEndpoint(config.newsEndpoint)
+    ? fetchRemoteNews(config.newsEndpoint.trim()).catch((error) => {
+      console.warn('お知らせを取得できなかったため、予備データを表示します：', error);
+      return NEWS_ITEMS;
+    })
+    : Promise.resolve(NEWS_ITEMS);
 
 // ダミー設定に config.js（SITE_CONFIG）があれば上書きした最終設定
 const resolveSiteConfig = () =>
@@ -62,19 +88,25 @@ const setupFilter = (container, options, allLabel, onChange) => {
 
 // ---- 各ページ ----
 
-const initTopPage = (doc) => {
-  renderHtml(doc.getElementById('latest-news'), newsListHtml(latestNews(NEWS_ITEMS, 3), NEWS_CATEGORIES));
+// お知らせは取得が終わってから描画する（それまでは HTML の「読み込んでいます…」を表示）
+const initTopPage = (doc, config) => {
+  loadNewsItems(config).then((news) =>
+    renderHtml(doc.getElementById('latest-news'), newsListHtml(latestNews(news, 3), NEWS_CATEGORIES)));
   renderHtml(doc.getElementById('class-highlights'), CLASSES_DATA.map(classHighlightHtml).join(''));
 };
 
-const renderNews = (doc, categoryId) => {
-  const items = sortNewsByDate(filterNewsByCategory(NEWS_ITEMS, categoryId));
+const renderNews = (doc, categoryId, news) => {
+  const items = sortNewsByDate(filterNewsByCategory(news, categoryId));
   renderHtml(doc.getElementById('news-list'), newsListHtml(items, NEWS_CATEGORIES));
   renderText(doc.getElementById('news-count'), resultCountText(items.length, '件のお知らせ'));
 };
 
-const initNewsPage = (doc) =>
-  setupFilter(doc.getElementById('news-filter'), NEWS_CATEGORIES, 'すべて', (id) => renderNews(doc, id));
+// 取得中に押された絞り込みも、取得完了後に押された順で反映される
+const initNewsPage = (doc, config) => {
+  const newsReady = loadNewsItems(config);
+  setupFilter(doc.getElementById('news-filter'), NEWS_CATEGORIES, 'すべて', (id) =>
+    newsReady.then((news) => renderNews(doc, id, news)));
+};
 
 const renderClasses = (doc, ageId) => {
   const items = filterClassesByAge(CLASSES_DATA, ageId);
@@ -157,7 +189,7 @@ const PAGE_INITIALIZERS = Object.freeze({
 const initSite = (doc) => {
   const config = resolveSiteConfig();
   applyCommon(doc, config);
-  warnNewsProblems();
+  warnNewsProblems(NEWS_DATA, '予備データ（js/data/news-data.js）');
   PAGE_INITIALIZERS[doc.body.dataset.page]?.(doc, config);
 };
 

@@ -66,3 +66,36 @@ test('config-sample.js はそのまま SITE_CONFIG として読み込める', ()
   const context = loadScripts(fs.readFileSync(path.join(ROOT, 'config-sample.js'), 'utf8'));
   assert.equal(vm.runInContext('resolveSiteConfig().tel', context), '000-111-2222');
 });
+
+// ---- お知らせの取得（fetch・タイマー・console はテスト用の偽物に差し替える） ----
+
+const fakeBrowser = (fetchResult) => `
+  class AbortController { constructor() { this.signal = {}; } abort() {} }
+  const setTimeout = () => 0;
+  const clearTimeout = () => {};
+  const console = { warn: () => {} };
+  const fetch = () => Promise.resolve(${fetchResult});
+  const SITE_CONFIG = { newsEndpoint: 'https://example.invalid/exec' };`;
+
+const loadedTitles = (context) =>
+  vm.runInContext('loadNewsItems(resolveSiteConfig()).then((news) => news.map((item) => item.title))', context);
+
+test('取得先が未設定・仮の値なら予備のお知らせを使う', async () => {
+  const context = loadScripts(fs.readFileSync(path.join(ROOT, 'config-sample.js'), 'utf8'));
+  assert.equal(await vm.runInContext('loadNewsItems(resolveSiteConfig()).then((news) => news === NEWS_ITEMS)', context), true);
+});
+
+test('取得に成功したら、誤りのあるお知らせを除いて Webアプリのお知らせを使う', async () => {
+  const json = "{ updatedAt: 'x', news: [{ date: '2026-11-01', category: 'イベント', title: '誤り' }, { date: '2026-11-02', category: 'event', title: 'シートから取得' }] }";
+  const context = loadScripts(fakeBrowser(`{ ok: true, json: () => Promise.resolve(${json}) }`));
+  assert.deepEqual([...await loadedTitles(context)], ['シートから取得']);
+});
+
+test('HTTPエラーや応答の形式違いなら予備のお知らせを使う', async () => {
+  const contexts = [
+    loadScripts(fakeBrowser('{ ok: false, status: 500 }')),
+    loadScripts(fakeBrowser("{ ok: true, json: () => Promise.resolve({ error: '読み込めませんでした' }) }")),
+  ];
+  const results = await Promise.all(contexts.map(loadedTitles));
+  results.forEach((titles) => assert.equal(titles.length, 6));
+});
