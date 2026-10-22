@@ -46,15 +46,20 @@ function onEdit() {
   CacheService.getScriptCache().remove(NEWS_CACHE_KEY);
 }
 
+// 公開のチェックボックス、日付とカテゴリの入力規則を設定する
+const applyNewsSheetRules = (sheet) => {
+  sheet.getRange('A2:A').insertCheckboxes();
+  sheet.getRange('B2:B').setNumberFormat('yyyy-mm-dd')
+    .setDataValidation(SpreadsheetApp.newDataValidation().requireDate().build());
+  sheet.getRange('C2:C').setDataValidation(
+    SpreadsheetApp.newDataValidation().requireValueInList(Object.keys(NEWS_SHEET_CATEGORY_IDS)).build());
+};
+
 // 初回だけ GASエディタから実行し、シート「news」の見出し・チェックボックス・入力規則を用意する
 function setupNewsSheet() {
   const book = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = book.getSheetByName(NEWS_SHEET_NAME) ?? book.insertSheet(NEWS_SHEET_NAME);
   sheet.getRange(1, 1, 1, NEWS_SHEET_HEADERS.length).setValues([NEWS_SHEET_HEADERS]).setFontWeight('bold');
   sheet.setFrozenRows(1);
-  sheet.getRange('A2:A').insertCheckboxes();
-  sheet.getRange('B2:B').setNumberFormat('yyyy-mm-dd')
-    .setDataValidation(SpreadsheetApp.newDataValidation().requireDate().build());
-  sheet.getRange('C2:C').setDataValidation(
-    SpreadsheetApp.newDataValidation().requireValueInList(Object.keys(NEWS_SHEET_CATEGORY_IDS)).build());
+  applyNewsSheetRules(sheet);
 }
