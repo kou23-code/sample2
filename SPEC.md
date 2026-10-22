@@ -25,6 +25,7 @@
 | F-005 | 教室案内 | 7教室のカード表示と対象年代フィルタ、体験申込への導線 | 実装済 |
 | F-006 | 問い合わせ・体験申込 | 電話受付案内（tel リンク）、入力フォーム、検証、送信完了表示 | 実装済 |
 | F-007 | 共通UI | ヘッダー・メニュー・フッター、スマホ用の固定連絡バー | 実装済 |
+| F-008 | お知らせのシート連携 | スプレッドシートに書いたお知らせを GAS の Webアプリ経由で取得して表示（未設定・失敗時は予備データ） | 実装済（GASの公開は運用時に実施） |
 
 ## 2. ディレクトリ構成
 
@@ -48,6 +49,10 @@
 │  ├─ lib/form-validate.js フォーム検証・URLクエリ解析（純粋関数）
 │  ├─ lib/templates.js     HTML文字列の生成・エスケープ（純粋関数）
 │  └─ app.js               DOM反映・イベント登録（副作用はここに集約）
+├─ gas/                    GASエディタに貼り付けるスクリプト（ブラウザでは読み込まない）
+│  ├─ news-sheet.js        シートの行→お知らせへの変換（純粋関数）
+│  ├─ news-api.js          Webアプリの入口 doGet・キャッシュ・シート初期設定（副作用）
+│  └─ README.md            スプレッドシートと GAS の設定手順・職員向けの書き方
 ├─ test/                   Node.js 標準テストランナーの単体テスト
 ├─ package.json            npm test → node --test
 ├─ SPEC.md
@@ -86,6 +91,7 @@
 | `venue` | 活動拠点 | `さくら町スポーツセンター（架空）` |
 | `copyrightYear` | 著作権表示の年 | `2026` |
 | `formEndpoint` | フォーム送信先URL | `''`（空＝送信しない） |
+| `newsEndpoint` | お知らせの取得先（GAS の Webアプリの URL） | `''`（空・`http(s)://` 以外の仮の値＝取得せず予備データを表示） |
 
 ### 4.2 上書きの手順
 
@@ -162,6 +168,33 @@
 - `toNewsItem`：前後の空白を除いて凍結した表示用の1件を返す。`prepareNews`：誤りのないお知らせだけを整え、凍結した配列で返す。
 - `app.js` は `NEWS_ITEMS = prepareNews(NEWS_DATA, NEWS_CATEGORIES)` をトップ（最新3件）とお知らせ一覧に使う。誤りのあるお知らせは画面に出さず、起動時に `console.warn` で「n件目〈タイトル〉を表示できません：〈誤りの内容〉」を出す。
 - 単体テスト（`test/news-logic.test.js`）で `findNewsProblems(NEWS_DATA)` が空であることを確認するため、データの書き間違いは `npm test` でも見つかる。
+
+#### スプレッドシート＋GAS からの取得（F-008）
+
+- 構成：職員がスプレッドシート（シート `news`）を編集 → GAS の Webアプリ（`doGet`）が JSON を返す → サイトの `app.js` が `fetch` → `prepareNews` で検証 → 描画。設定手順は `gas/README.md`。
+- `js/data/news-data.js` は予備データとして残す（`newsEndpoint` 未設定・取得失敗時に表示）。
+
+| 列 | 見出し | 内容 | JSON への出力 |
+| --- | --- | --- | --- |
+| A | 公開 | チェックボックス。チェックなしは下書き | 出力しない（絞り込みのみ） |
+| B | 日付 | 日付（入力規則で日付のみ） | `date`（日本時間の `YYYY-MM-DD`） |
+| C | カテゴリ | プルダウン（お知らせ／イベント／教室情報／募集） | `category`（ID に変換） |
+| D | タイトル | 必須 | `title` |
+| E | 本文 | 省略可 | `body` |
+| F | メモ | 職員どうしの連絡用 | **出力しない** |
+
+- 公開条件：公開にチェックがあり、日付が今日（日本時間）以前の行のみ（未来の日付は予約公開）。
+- 応答：`{ updatedAt: ISO日時, news: [{ date, category, title, body }] }`。例外時は `{ error: 'お知らせを読み込めませんでした' }`。
+- GAS 側（`gas/news-sheet.js`・純粋関数）：`sheetText`、`sheetDateText`（Date→日本時間の日付、文字列はそのまま）、`sheetCategoryId`（日本語名→ID）、`isPublishedRow`、`sheetRowToEntry`、`newsRowsToEntries`、`newsResponse`。
+- GAS 側（`gas/news-api.js`・副作用）：`doGet`（JSON を返す）、`CacheService` で5分キャッシュ（3万文字超は保存しない）、`onEdit`（シート編集でキャッシュ削除）、`setupNewsSheet`（初回に見出し・チェックボックス・入力規則を作成）。GAS から呼ぶ `doGet` / `onEdit` / `setupNewsSheet` のみ `function` 宣言とする。
+- Webアプリの公開設定：実行するユーザー「自分」、アクセスできるユーザー「全員」。シート自体は職員のみに共有する。シートには個人情報を書かない運用とし、メモ列も外部に出さない。
+- サイト側（`js/lib/news-logic.js`・純粋関数）：`isNewsEndpoint`（`http(s)://` で始まる URL のみ true。`YOUR_GAS_WEB_APP_URL` などの仮の値は false）、`parseNewsResponse`（応答から `news` 配列を取り出す。形が違えば `null`）。
+- サイト側（`js/app.js`）：`loadNewsItems(config)` が Promise でお知らせを返す。
+  - 取得先あり：`fetch`（5秒で `AbortController` により打ち切り）→ HTTP エラー・形式違い・通信失敗・タイムアウトはすべて予備データにフォールバックし、`console.warn` を出す。
+  - 取得先なし：すぐに予備データを返す。
+  - 取得が終わるまでは HTML の「お知らせを読み込んでいます…」を表示し、終わってから一度だけ描画する（予備データからの差し替えによる表示のちらつきを避ける）。
+  - お知らせ一覧の絞り込みは、取得中に押された場合も取得完了後に押された順で反映する。
+- 表示する HTML は `templates.js` でエスケープするため、シートに HTML やスクリプトが書かれても実行されない。
 
 ### 5.5 教室案内（classes.html）
 
@@ -257,9 +290,11 @@
 
 - 実装中：`node --test`（または `npm test`）による単体テストのみ実行する。
   - `config-merge` / `news-logic` / `class-logic` / `form-validate` / `templates`：各純粋関数
-  - `browser-scripts`：全スクリプトをブラウザと同じ順で1つの実行環境に読み込み、名前の衝突がないこと、`config.js` による上書きを検証
+  - `browser-scripts`：全スクリプトをブラウザと同じ順で1つの実行環境に読み込み、名前の衝突がないこと、`config.js` による上書き、お知らせ取得（偽の `fetch` で成功・HTTPエラー・形式違い・未設定）を検証
   - `html-pages`：リンクの `.html` 明記・リンク先の存在・スクリプト順・ファイル名規約
-  - `code-rules`：関数10行以下・`let` / `var` 不使用
+  - `code-rules`：関数10行以下・`let` / `var` 不使用（対象：`js/`・`gas/`・`test/`。GAS用の `function` 宣言も含む）
+  - `gas-news-sheet`：シートの行の変換（日本時間の日付・カテゴリ名・公開条件・メモ列の除外）
+  - `gas-news-api`：偽の SpreadsheetApp・CacheService・ContentService 上で `doGet`・キャッシュ・`onEdit`・エラー時の JSON を検証
 - マージ直前：ヘッドレスChromeによる画面E2E確認を、変更箇所に対して1回だけ実行する。
 
 ## 8. 変更履歴
@@ -274,3 +309,4 @@
 | 2026-10-20 | 「会費について」ブロック全体を共通テンプレート化し、教室案内の年代フィルタ直上にも配置 |
 | 2026-10-22 | デザインをグリーン系に刷新（配色・角丸・余白）、トップに仮メインビジュアル（Unsplash）を追加、各セクションにアイコンと装飾を追加。HTMLテストのスクリプト順検証を `<script>` タグに限定 |
 | 2026-10-22 | お知らせデータを freeze・id 不要の簡単な書き方に変更し、入力チェック（誤りは非表示＋警告＋テストで検出）を追加 |
+| 2026-10-22 | お知らせをスプレッドシート＋GAS の Webアプリから fetch で取得する仕組みを追加（gas/ のスクリプト・設定手順書、予備データへのフォールバック、予約公開） |
