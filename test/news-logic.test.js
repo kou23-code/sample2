@@ -5,6 +5,7 @@ const {
   sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa,
   isNewsDate, newsEntryErrors, findNewsProblems, toNewsItem, prepareNews,
   isNewsEndpoint, parseNewsResponse,
+  isHttpsUrl, driveFileId, attachmentPreviewSrc, newsAttachment, findAttachmentProblems,
 } = require('../js/lib/news-logic.js');
 
 const sample = [
@@ -83,10 +84,16 @@ test('誤りのあるお知らせだけを番号とタイトル付きで返す',
   assert.deepEqual(problems.map((p) => [p.number, p.title, p.errors.length]), [[2, '体験会', 1], [3, '', 1]]);
 });
 
-test('表示用データは前後の空白を除いて凍結し、body 省略時は空文字にする', () => {
+test('表示用データは前後の空白を除いて凍結し、id・body・添付URLの省略時は空文字にする', () => {
   const item = toNewsItem({ date: ' 2026-10-15 ', category: ' event ', title: ' 体験会 ' });
-  assert.deepEqual(item, { date: '2026-10-15', category: 'event', title: '体験会', body: '' });
+  assert.deepEqual(item, { id: '', date: '2026-10-15', category: 'event', title: '体験会', body: '', attachmentUrl: '' });
   assert.equal(Object.isFrozen(item), true);
+});
+
+test('表示用データは ID と https の添付URLを残し、使えない添付URLは空文字にする', () => {
+  const url = 'https://example.com/a.pdf';
+  assert.deepEqual([toNewsItem({ ...okEntry, id: ' n-1 ', attachmentUrl: ` ${url} ` })].map((n) => [n.id, n.attachmentUrl]), [['n-1', url]]);
+  assert.equal(toNewsItem({ ...okEntry, attachmentUrl: 'http://example.com/a.pdf' }).attachmentUrl, '');
 });
 
 test('誤りのあるお知らせを除いて表示用に整え、元の配列は変更しない', () => {
@@ -113,4 +120,41 @@ test('Webアプリの応答からお知らせの配列を取り出し、形が�
   assert.equal(parseNewsResponse({ updatedAt: 'x', news }), news);
   [null, undefined, {}, { news: 'x' }, { error: '読み込めませんでした' }, []].forEach((json) =>
     assert.equal(parseNewsResponse(json), null, JSON.stringify(json)));
+});
+
+// ---- 添付ファイル ----
+
+const DRIVE_ID = '1AbC_d-EfG';
+const THUMBNAIL = `https://drive.google.com/thumbnail?id=${DRIVE_ID}&sz=w800`;
+
+test('https で始まり、空白・引用符・山かっこを含まない URL だけを添付として使う', () => {
+  assert.equal(isHttpsUrl(' https://example.com/a.pdf '), true);
+  ['', undefined, 'http://example.com/a.pdf', 'javascript:alert(1)', 'https://a.com/x"onerror', 'https://a.com/<x>', 'https://a.com/a b']
+    .forEach((url) => assert.equal(isHttpsUrl(url), false, String(url)));
+});
+
+test('Googleドライブの共有リンクの3つの形からファイルIDを取り出し、ドライブ以外は空文字', () => {
+  [`https://drive.google.com/file/d/${DRIVE_ID}/view?usp=sharing`, `https://drive.google.com/open?id=${DRIVE_ID}`,
+    `https://drive.google.com/uc?export=view&id=${DRIVE_ID}`].forEach((url) => assert.equal(driveFileId(url), DRIVE_ID, url));
+  ['https://example.com/file/d/x/view', 'https://docs.google.com/document/d/x/edit', ''].forEach((url) =>
+    assert.equal(driveFileId(url), '', url));
+});
+
+test('プレビュー画像はドライブならサムネイル、画像ファイルならそのURL、それ以外は無し', () => {
+  assert.equal(attachmentPreviewSrc(`https://drive.google.com/file/d/${DRIVE_ID}/view`), THUMBNAIL);
+  assert.equal(attachmentPreviewSrc('https://example.com/photo.JPG?w=800'), 'https://example.com/photo.JPG?w=800');
+  assert.equal(attachmentPreviewSrc('https://example.com/guide.pdf'), '');
+});
+
+test('添付ファイルは開くURLとプレビュー画像のURLにし、使えないURLは null', () => {
+  const share = `https://drive.google.com/file/d/${DRIVE_ID}/view`;
+  assert.deepEqual(newsAttachment(share), { href: share, previewSrc: THUMBNAIL });
+  assert.deepEqual(newsAttachment('https://example.com/guide.pdf'), { href: 'https://example.com/guide.pdf', previewSrc: '' });
+  assert.equal(Object.isFrozen(newsAttachment(share)), true);
+  [undefined, '', 'http://example.com/a.png'].forEach((url) => assert.equal(newsAttachment(url), null, String(url)));
+});
+
+test('添付URLが書かれているのに使えないお知らせだけを番号付きで返す', () => {
+  const entries = [okEntry, { ...okEntry, attachmentUrl: 'https://ok.example/a.pdf' }, { ...okEntry, attachmentUrl: 'ドライブ参照' }, null];
+  assert.deepEqual(findAttachmentProblems(entries), [{ number: 3, title: '体験会', url: 'ドライブ参照' }]);
 });
