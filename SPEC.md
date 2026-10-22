@@ -197,6 +197,23 @@
   - お知らせ一覧の絞り込みは、取得中に押された場合も取得完了後に押された順で反映する。
 - 表示する HTML は `templates.js` でエスケープするため、シートに HTML やスクリプトが書かれても実行されない。
 
+#### 添付ファイルの表示（`attachmentUrl`）
+
+- 判定・変換はサイト側の純粋関数（`js/lib/news-logic.js`）で行う。GAS はシートの値をそのまま返す。
+  - `isHttpsUrl`：`https://` で始まり、空白・引用符・山かっこを含まない URL のみ使う（`http:`・`javascript:` 等は使わない）。
+  - `driveFileId`：Googleドライブの共有リンク（`/file/d/ID/…`・`open?id=ID`・`uc?id=ID`）からファイルIDを取り出す。
+  - `attachmentPreviewSrc`：ドライブは `https://drive.google.com/thumbnail?id=ID&sz=w800`、拡張子が jpg / jpeg / png / gif / webp / avif の URL はそのまま、それ以外はプレビューなし。
+  - `newsAttachment`：`{ href（開くURL＝元のURL）, previewSrc }` を返す（使えない URL は `null`）。
+  - `findAttachmentProblems`：添付URLが書かれているのに使えないお知らせを返す。お知らせ自体は表示し、添付だけ出さずに `console.warn` で知らせる。
+  - `toNewsItem` は `id` と `attachmentUrl`（使えない URL は空文字）も表示用データに残す。
+- 画面（`templates.js` の `newsAttachmentHtml`）：
+  - プレビューあり：画像（クリックで添付を開く。ボタンと重複するため読み上げ・Tab移動の対象外）＋「📎 添付ファイルを開く」ボタン。
+  - プレビューなし（PDF 等）：ボタンのみ。
+  - リンクは新しいタブで開く（`target="_blank" rel="noopener noreferrer"`）。画像は `loading="lazy"`・`referrerpolicy="no-referrer"`。
+  - トップの最新3件（`.news-list--compact`）はプレビューを出さずボタンのみ。
+  - プレビュー画像が読み込めない場合（非公開のドライブファイル等）は、`app.js` が document のキャプチャ段階で `error` を受け取り、プレビュー枠を削除してボタンだけを残す。
+- ドライブのファイルを添付する場合は、共有設定を「リンクを知っている全員が閲覧可」にする（そうでないとプレビューが出ず、閲覧者は開けない）。
+
 ### 5.5 教室案内（classes.html）
 
 | ID | 教室名 | 対象 | 曜日 | 時間 | 定員 | 会費 | 絞り込み年代 |
@@ -312,3 +329,4 @@
 | 2026-10-22 | お知らせデータを freeze・id 不要の簡単な書き方に変更し、入力チェック（誤りは非表示＋警告＋テストで検出）を追加 |
 | 2026-10-22 | お知らせをスプレッドシート＋GAS の Webアプリから fetch で取得する仕組みを追加（gas/ のスクリプト・設定手順書、予備データへのフォールバック、予約公開） |
 | 2026-10-22 | スプレッドシートの列構成を確定版（A:ID／B:日付／C:カテゴリ／D:タイトル／E:本文／F:添付ファイルURL／G:公開フラグ）に変更し、GAS の応答に `id`・`attachmentUrl` を追加 |
+| 2026-10-22 | お知らせに添付ファイルの画像プレビューと「添付ファイルを開く」ボタンを追加（Googleドライブの共有リンクはサムネイルURLに変換） |
