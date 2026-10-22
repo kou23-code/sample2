@@ -304,6 +304,8 @@ p { margin: 0 0 1em; }
 .contact-cta__box--tel { border: 3px solid var(--color-primary); }
 .contact-cta__box--form { border: 3px solid var(--color-accent); }
 .contact-cta__box .button { width: 100%; max-width: 360px; }
+/* 2列表示でも電話番号が途中で折り返さないよう、枠内では少し小さめにする */
+.contact-cta__box .tel-number { font-size: clamp(1.6rem, 6.4vw, 2.3rem); white-space: nowrap; }
 /* 問い合わせ手段ごとに大きめの丸アイコン */
 .contact-cta__box h3::before { content: "📞"; content: "📞" / ""; display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 50%; background: var(--color-green-soft); font-size: 1.8rem; line-height: 1; }
 .contact-cta__box--form h3::before { content: "💻"; content: "💻" / ""; background: #fff1e6; }
