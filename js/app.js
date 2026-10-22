@@ -6,6 +6,8 @@ const CLASS_IDS = Object.freeze(CLASSES_DATA.map((item) => item.id));
 // 予備のお知らせ（js/data/news-data.js）のうち、誤りのないもの。取得先が未設定・取得失敗のときに表示する
 const NEWS_ITEMS = prepareNews(NEWS_DATA, NEWS_CATEGORIES);
 const NEWS_FETCH_TIMEOUT_MS = 5000;
+// トップページの「最新のお知らせ」に表示する件数
+const TOP_NEWS_COUNT = 5;
 
 // 誤りのあるお知らせは表示せず、直し方をコンソールに出す（使えない添付URLは、添付だけ出さずに知らせる）
 const warnNewsProblems = (entries, source) => {
@@ -99,7 +101,7 @@ const setupFilter = (container, options, allLabel, onChange) => {
 // お知らせは取得が終わってから描画する（それまでは HTML の「読み込んでいます…」を表示）
 const initTopPage = (doc, config) => {
   loadNewsItems(config).then((news) =>
-    renderHtml(doc.getElementById('latest-news'), newsLinkListHtml(latestNews(news, 3), NEWS_CATEGORIES)));
+    renderHtml(doc.getElementById('latest-news'), newsLinkListHtml(latestNews(news, TOP_NEWS_COUNT), NEWS_CATEGORIES)));
   renderHtml(doc.getElementById('class-highlights'), CLASSES_DATA.map(classHighlightHtml).join(''));
 };
 

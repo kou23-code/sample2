@@ -127,3 +127,10 @@ test('管理画面は config.js の newsEndpoint を取得先に使う', () => {
   const context = loadAdminScripts("const SITE_CONFIG = { newsEndpoint: 'https://script.google.com/macros/s/x/exec' };");
   assert.equal(vm.runInContext('adminSiteConfig().newsEndpoint', context), 'https://script.google.com/macros/s/x/exec');
 });
+
+test('トップページの最新のお知らせは5件表示する', () => {
+  const context = loadScripts('');
+  assert.equal(vm.runInContext('TOP_NEWS_COUNT', context), 5);
+  const html = vm.runInContext('newsLinkListHtml(latestNews(NEWS_ITEMS, TOP_NEWS_COUNT), NEWS_CATEGORIES)', context);
+  assert.equal((html.match(/<li class="news-item">/g) ?? []).length, 5);
+});
