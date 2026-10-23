@@ -7,7 +7,7 @@ const SITE_CONFIG = {
   address: '架空県サンプル市1-1-1',
   tel: '000-111-2222',
   telHours: '受付：月〜金 10:00〜16:00',
-  // GAS の Webアプリの URL に置き換える（手順は gas/README.md）。仮の値のままなら取得しない
-  // 問い合わせフォームも、この URL の GAS へ送信される（別の送信先を使う場合だけ formEndpoint を追加する）
-  newsEndpoint: 'YOUR_GAS_WEB_APP_URL',
+  // GAS の Webアプリの URL は js/default-config.js に設定済み（GitHub Pages では config.js が配信されないため）
+  // 手元だけ別の GAS で試すときは、次の行のコメントを外して URL を書く（仮の値のままにすると送信・取得しなくなる）
+  // newsEndpoint: 'YOUR_GAS_WEB_APP_URL',
 };
