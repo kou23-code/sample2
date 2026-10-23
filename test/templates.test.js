@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { NEWS_CATEGORIES, NEWS_DATA } = require('../js/data/news-data.js');
 const { AGE_GROUPS, CLASSES_DATA, FEE_SYSTEM, SPORTS_INSURANCE } = require('../js/data/classes-data.js');
-const { INQUIRY_TYPES } = require('../js/lib/form-validate.js');
+const { INQUIRY_TYPES, GRADES } = require('../js/lib/form-validate.js');
 const tpl = require('../js/lib/templates.js');
 
 test('HTML特殊文字をエスケープする', () => {
@@ -111,25 +111,36 @@ test('種別ラジオボタンを生成する', () => {
   assert.equal((html.match(/type="radio"/g) ?? []).length, 2);
 });
 
-test('送信内容の確認表示を作り、入力値はエスケープされる', () => {
-  const values = { inquiryType: 'trial', classId: 'play', preferredDate: '2026-11-03', name: '<b>架空</b>', email: 'a@example.com', tel: '', message: '' };
+test('体験申込の送信内容の確認表示は体験の項目を並べ、入力値はエスケープされる', () => {
+  const values = {
+    inquiryType: 'trial', classId: 'play', preferredDate: '2026-11-03', guardianName: '<b>架空</b>', participantName: '架空 太郎',
+    schoolName: '架空小学校', grade: 'es3', age: '8', name: '使わない', email: 'a@example.com', tel: '000-000-0000', message: 'よろしく', agree: 'on',
+  };
   const rows = tpl.completionRows(values, CLASSES_DATA);
-  assert.deepEqual(rows[1], ['希望教室', '運動あそび教室']);
-  assert.deepEqual(rows[2], ['希望日', '2026年11月3日']);
-  assert.deepEqual(rows[5], ['電話番号', '未入力']);
+  assert.deepEqual(rows.map(([label]) => label), [
+    '種別', '希望教室', '希望日', '保護者名', '参加者のお名前', '学校名', '学年', '年齢', 'メールアドレス', '電話番号', '内容',
+  ]);
+  assert.deepEqual([rows[1][1], rows[2][1], rows[6][1], rows[7][1]], ['運動あそび教室', '2026年11月3日', '小学3年', '8歳']);
   assert.match(tpl.completionTableHtml(rows), /&lt;b&gt;架空&lt;\/b&gt;/);
+});
+
+test('一般的なお問い合わせの確認表示は、お名前・連絡先・内容だけ', () => {
+  const values = { inquiryType: 'general', classId: '', preferredDate: '', name: '架空 一郎', email: 'a@example.com', tel: '000-000-0000', message: '質問' };
+  const rows = tpl.completionRows(values, CLASSES_DATA);
+  assert.deepEqual(rows.map(([label]) => label), ['種別', 'お名前', 'メールアドレス', '電話番号', '内容']);
+  assert.deepEqual(rows[0], ['種別', '一般的なお問い合わせ']);
+});
+
+test('学年の選択肢は未選択＋14学年', () => {
+  const html = tpl.gradeOptionsHtml(GRADES);
+  assert.equal((html.match(/<option/g) ?? []).length, 15);
+  assert.match(html, /<option value="es1">小学1年<\/option>/);
 });
 
 test('件数・エラー件数の案内文を作る', () => {
   assert.equal(tpl.resultCountText(7, '教室'), '7教室を表示しています。');
   assert.equal(tpl.errorSummaryText(0), '');
   assert.match(tpl.errorSummaryText(2), /2件の確認事項/);
-});
-
-test('希望教室なしは「指定なし」', () => {
-  const rows = tpl.completionRows({ inquiryType: 'general', classId: '', preferredDate: '' }, CLASSES_DATA);
-  assert.deepEqual(rows[1], ['希望教室', '指定なし']);
-  assert.ok(rows.every(([label]) => label !== '希望日'), '一般的なお問い合わせでは希望日を表示しない');
 });
 
 // ---- お知らせの添付ファイル ----
