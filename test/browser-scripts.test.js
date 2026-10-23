@@ -80,9 +80,22 @@ const fakeBrowser = (fetchResult) => `
 const loadedTitles = (context) =>
   vm.runInContext('loadNewsItems(resolveSiteConfig()).then((news) => news.map((item) => item.title))', context);
 
-test('取得先が未設定・仮の値なら予備のお知らせを使う', async () => {
-  const context = loadScripts(fs.readFileSync(path.join(ROOT, 'config-sample.js'), 'utf8'));
+test('取得先を仮の値（http(s):// 以外）で上書きしたら予備のお知らせを使う', async () => {
+  const context = loadScripts("const SITE_CONFIG = { newsEndpoint: 'YOUR_GAS_WEB_APP_URL' };");
   assert.equal(await vm.runInContext('loadNewsItems(resolveSiteConfig()).then((news) => news === NEWS_ITEMS)', context), true);
+});
+
+// GitHub Pages では .gitignore 対象の config.js が配信されない（404）。それでも GAS へ送信・取得できること
+test('config.js が無い公開サイトでも、問い合わせの送信先とお知らせの取得先は GAS の Webアプリになる', () => {
+  const context = loadScripts('');
+  const endpoint = vm.runInContext('inquiryEndpoint(resolveSiteConfig())', context);
+  assert.match(endpoint, /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/);
+  assert.equal(vm.runInContext('resolveSiteConfig().newsEndpoint', context), endpoint);
+});
+
+test('config-sample.js をそのまま config.js にしても、GAS の送信先を仮の値で上書きしない', () => {
+  const context = loadScripts(fs.readFileSync(path.join(ROOT, 'config-sample.js'), 'utf8'));
+  assert.match(vm.runInContext('inquiryEndpoint(resolveSiteConfig())', context), /^https:\/\/script\.google\.com\//);
 });
 
 test('取得に成功したら、誤りのあるお知らせを除いて Webアプリのお知らせを使う', async () => {

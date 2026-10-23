@@ -274,3 +274,12 @@ test('シート・メールの項目は、サイトのフォームの全項目�
   const labels = vm.runInContext('Object.keys(CONTACT_FIELD_LABELS)', loadGas());
   assert.deepEqual([...labels], FORM_FIELDS.filter((field) => field !== 'agree'));
 });
+
+// ---- メール送信の権限の承認用 ----
+
+test('authMail は残り送信可能数を読むだけで、メールは送らない（GASエディタで権限を承認するための関数）', () => {
+  const context = loadGas();
+  vm.runInContext('MailApp.getRemainingDailyQuota = () => { record.quotaChecked = true; return 100; };', context);
+  vm.runInContext('authMail()', context);
+  assert.deepEqual([context.record.quotaChecked, context.record.mails.length], [true, 0]);
+});
