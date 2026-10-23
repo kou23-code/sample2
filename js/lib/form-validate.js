@@ -2,11 +2,13 @@
 
 const INQUIRY_TYPES = Object.freeze([
   Object.freeze({ id: 'trial', label: '体験申込' }),
-  Object.freeze({ id: 'question', label: '教室・入会についての質問' }),
-  Object.freeze({ id: 'other', label: 'その他' }),
+  Object.freeze({ id: 'general', label: '一般的なお問い合わせ' }),
 ]);
 
-const FORM_FIELDS = Object.freeze(['inquiryType', 'classId', 'name', 'email', 'tel', 'message', 'agree']);
+const TRIAL_TYPE_ID = 'trial';
+const FORM_FIELDS = Object.freeze(['inquiryType', 'classId', 'preferredDate', 'name', 'email', 'tel', 'message', 'agree']);
+// 体験の希望日は今日から何日後以降を選べるか（前日・当日の予約は電話のみ受け付ける）
+const TRIAL_MIN_DAYS_AHEAD = 2;
 const NAME_MAX_LENGTH = 50;
 const MESSAGE_MAX_LENGTH = 1000;
 
@@ -14,6 +16,16 @@ const isBlank = (value) => String(value ?? '').trim() === '';
 const isEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const countDigits = (value) => value.replace(/\D/g, '').length;
 const isTel = (value) => /^[0-9+\-()\s]+$/.test(value) && countDigits(value) >= 10 && countDigits(value) <= 11;
+const isTrialInquiry = (typeId) => typeId === TRIAL_TYPE_ID;
+
+// Date を端末の現地時刻の YYYY-MM-DD にする
+const pad2 = (number) => String(number).padStart(2, '0');
+const toIsoDate = (date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+const isIsoDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && toIsoDate(new Date(`${value}T00:00:00`)) === value;
+
+// 体験の希望日として選べる最初の日（今日を渡すと明後日の YYYY-MM-DD を返す。引数は変更しない）
+const earliestTrialDate = (today) =>
+  toIsoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + TRIAL_MIN_DAYS_AHEAD));
 
 // 入力値を文字列化・前後空白除去した新しいオブジェクトにする
 const normalizeFormValues = (raw) =>
@@ -23,8 +35,15 @@ const checkInquiryType = (values) =>
   INQUIRY_TYPES.some((type) => type.id === values.inquiryType) ? '' : 'お問い合わせ種別を選択してください';
 
 const checkClassId = (values, classIds) =>
-  values.inquiryType === 'trial' && isBlank(values.classId) ? '体験を希望する教室を選択してください'
+  isTrialInquiry(values.inquiryType) && isBlank(values.classId) ? '体験を希望する教室を選択してください'
     : !isBlank(values.classId) && !classIds.includes(values.classId) ? '教室の選択が正しくありません' : '';
+
+// 体験申込のときだけ必須。minDate（earliestTrialDate の値）より前の日付は受け付けない
+const checkPreferredDate = (values, classIds, minDate) =>
+  !isTrialInquiry(values.inquiryType) ? ''
+    : isBlank(values.preferredDate) ? '体験の希望日を選択してください'
+      : !isIsoDate(values.preferredDate) ? '希望日の形式が正しくありません'
+        : values.preferredDate < minDate ? '希望日は明後日以降を選択してください（前日・当日のご予約はお電話でお願いいたします）' : '';
 
 const checkName = (values) =>
   isBlank(values.name) ? 'お名前を入力してください'
@@ -38,20 +57,20 @@ const checkTel = (values) =>
   isBlank(values.tel) || isTel(values.tel) ? '' : '電話番号は10〜11桁の数字で入力してください（ハイフン可）';
 
 const checkMessage = (values) =>
-  values.inquiryType !== 'trial' && isBlank(values.message) ? 'お問い合わせ内容を入力してください'
+  !isTrialInquiry(values.inquiryType) && isBlank(values.message) ? 'お問い合わせ内容を入力してください'
     : values.message.length > MESSAGE_MAX_LENGTH ? `内容は${MESSAGE_MAX_LENGTH}文字以内で入力してください` : '';
 
 const checkAgree = (values) => (values.agree === 'on' ? '' : '個人情報の取り扱いへの同意が必要です');
 
 const FIELD_CHECKS = Object.freeze([
-  ['inquiryType', checkInquiryType], ['classId', checkClassId], ['name', checkName],
-  ['email', checkEmail], ['tel', checkTel], ['message', checkMessage], ['agree', checkAgree],
+  ['inquiryType', checkInquiryType], ['classId', checkClassId], ['preferredDate', checkPreferredDate],
+  ['name', checkName], ['email', checkEmail], ['tel', checkTel], ['message', checkMessage], ['agree', checkAgree],
 ]);
 
-// フォーム全体を検証し、{ valid, values, errors } を返す
-const validateForm = (raw, classIds) => {
+// フォーム全体を検証し、{ valid, values, errors } を返す（minDate は体験の希望日の下限 YYYY-MM-DD）
+const validateForm = (raw, classIds, minDate) => {
   const values = normalizeFormValues(raw);
-  const results = FIELD_CHECKS.map(([field, check]) => [field, check(values, classIds)]);
+  const results = FIELD_CHECKS.map(([field, check]) => [field, check(values, classIds, minDate)]);
   const errors = Object.freeze(Object.fromEntries(results.filter(([, message]) => message !== '')));
   return Object.freeze({ valid: Object.keys(errors).length === 0, values, errors });
 };
@@ -69,7 +88,7 @@ const parseContactQuery = (search, classIds) => {
 
 if (typeof module === 'object' && module.exports) {
   module.exports = {
-    INQUIRY_TYPES, FORM_FIELDS, isBlank, isEmail, isTel,
+    INQUIRY_TYPES, FORM_FIELDS, isBlank, isEmail, isTel, isTrialInquiry, isIsoDate, earliestTrialDate,
     normalizeFormValues, validateForm, inquiryTypeLabel, parseContactQuery,
   };
 }

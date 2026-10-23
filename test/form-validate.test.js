@@ -1,18 +1,20 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  validateForm, normalizeFormValues, isEmail, isTel, inquiryTypeLabel, parseContactQuery,
+  INQUIRY_TYPES, validateForm, normalizeFormValues, isEmail, isTel, inquiryTypeLabel, parseContactQuery,
+  isTrialInquiry, isIsoDate, earliestTrialDate,
 } = require('../js/lib/form-validate.js');
 
 const CLASS_IDS = ['track-kids', 'table-tennis'];
+const MIN_DATE = '2026-10-25';
 const validTrial = {
-  inquiryType: 'trial', classId: 'track-kids', name: '架空 太郎',
+  inquiryType: 'trial', classId: 'track-kids', preferredDate: '2026-11-10', name: '架空 太郎',
   email: 'taro@example.com', tel: '000-000-0000', message: '', agree: 'on',
 };
-const errorsOf = (raw) => validateForm(raw, CLASS_IDS).errors;
+const errorsOf = (raw) => validateForm(raw, CLASS_IDS, MIN_DATE).errors;
 
 test('正しい体験申込は検証を通過する（内容は任意）', () => {
-  const result = validateForm(validTrial, CLASS_IDS);
+  const result = validateForm(validTrial, CLASS_IDS, MIN_DATE);
   assert.equal(result.valid, true);
   assert.deepEqual(result.errors, {});
 });
@@ -29,8 +31,8 @@ test('存在しない教室IDはエラー', () => {
   assert.match(errorsOf({ ...validTrial, classId: 'fake' }).classId, /正しくありません/);
 });
 
-test('質問では教室は任意だが内容が必須', () => {
-  const errors = errorsOf({ ...validTrial, inquiryType: 'question', classId: '' });
+test('一般的なお問い合わせでは教室・希望日は任意だが内容が必須', () => {
+  const errors = errorsOf({ ...validTrial, inquiryType: 'general', classId: '', preferredDate: '' });
   assert.deepEqual(Object.keys(errors), ['message']);
 });
 
@@ -71,7 +73,7 @@ test('入力値は前後空白が除去され、元の入力は変更されな�
 test('URLクエリから初期選択値を取り出す', () => {
   assert.deepEqual(parseContactQuery('?type=trial&class=track-kids', CLASS_IDS), { type: 'trial', classId: 'track-kids' });
   assert.deepEqual(parseContactQuery('?class=table-tennis', CLASS_IDS), { type: 'trial', classId: 'table-tennis' });
-  assert.deepEqual(parseContactQuery('?type=question', CLASS_IDS), { type: 'question', classId: '' });
+  assert.deepEqual(parseContactQuery('?type=general', CLASS_IDS), { type: 'general', classId: '' });
 });
 
 test('URLクエリの不正な値は無視する', () => {
@@ -82,4 +84,43 @@ test('URLクエリの不正な値は無視する', () => {
 test('種別の表示名を引ける', () => {
   assert.equal(inquiryTypeLabel('trial'), '体験申込');
   assert.equal(inquiryTypeLabel('x'), '');
+});
+
+test('種別は体験申込と一般的なお問い合わせの2つ', () => {
+  assert.deepEqual(INQUIRY_TYPES.map((type) => type.label), ['体験申込', '一般的なお問い合わせ']);
+  assert.equal(isTrialInquiry('trial'), true);
+  assert.equal(isTrialInquiry('general'), false);
+});
+
+test('体験の希望日の下限は明後日（月末・年末もまたげる）', () => {
+  assert.equal(earliestTrialDate(new Date(2026, 9, 23)), '2026-10-25');
+  assert.equal(earliestTrialDate(new Date(2026, 9, 30, 23, 59)), '2026-11-01');
+  assert.equal(earliestTrialDate(new Date(2026, 11, 31)), '2027-01-02');
+});
+
+test('earliestTrialDate は渡した日付を変更しない', () => {
+  const today = new Date(2026, 9, 23);
+  earliestTrialDate(today);
+  assert.equal(today.getDate(), 23);
+});
+
+test('体験申込では希望日が必須', () => {
+  assert.match(errorsOf({ ...validTrial, preferredDate: '' }).preferredDate, /希望日を選択/);
+});
+
+test('体験申込の希望日は明後日以降のみ（今日・明日はエラー）', () => {
+  assert.match(errorsOf({ ...validTrial, preferredDate: '2026-10-23' }).preferredDate, /明後日以降/);
+  assert.match(errorsOf({ ...validTrial, preferredDate: '2026-10-24' }).preferredDate, /お電話/);
+  assert.equal(errorsOf({ ...validTrial, preferredDate: MIN_DATE }).preferredDate, undefined);
+});
+
+test('存在しない日付や形式違いの希望日はエラー', () => {
+  assert.equal(isIsoDate('2026-02-30'), false);
+  assert.equal(isIsoDate('2026/11/10'), false);
+  assert.match(errorsOf({ ...validTrial, preferredDate: '2026-13-01' }).preferredDate, /形式/);
+});
+
+test('一般的なお問い合わせでは希望日を検証しない', () => {
+  const errors = errorsOf({ ...validTrial, inquiryType: 'general', preferredDate: '2026-10-23', message: '質問です' });
+  assert.deepEqual(errors, {});
 });

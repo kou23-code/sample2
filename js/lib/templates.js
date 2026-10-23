@@ -4,7 +4,7 @@
 const tplDeps = typeof module === 'object' && module.exports
   ? { ...require('./news-logic.js'), ...require('./class-logic.js'), ...require('./form-validate.js') }
   : {
-    formatDateJa, categoryLabel, newsAttachment, hasNewsOrder, newsAnchorId, classDisplayName, ageLabels, inquiryTypeLabel,
+    formatDateJa, categoryLabel, newsAttachment, hasNewsOrder, newsAnchorId, classDisplayName, ageLabels, inquiryTypeLabel, isTrialInquiry,
     classMainRows, classFeeRows, sessionRows, sessionHeading, classTargetSummary, hasMultipleSessions,
     feeSystemRows, insuranceTitle, insuranceRows, insuranceRangeText, classFeeRangeText,
   };
@@ -187,6 +187,7 @@ const inquiryTypeRadiosHtml = (types, selectedId) =>
 const completionRows = (values, classes) => [
   ['種別', tplDeps.inquiryTypeLabel(values.inquiryType)],
   ['希望教室', tplDeps.classDisplayName(classes.find((item) => item.id === values.classId) ?? { name: '指定なし' })],
+  ...(tplDeps.isTrialInquiry(values.inquiryType) ? [['希望日', tplDeps.formatDateJa(values.preferredDate)]] : []),
   ['お名前', values.name], ['メールアドレス', values.email],
   ['電話番号', values.tel || '未入力'], ['内容', values.message || '未入力'],
 ];
