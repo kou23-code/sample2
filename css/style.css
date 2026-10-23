@@ -438,6 +438,7 @@ fieldset[aria-invalid="true"] .choice { border-color: var(--color-error); }
   width: 100%; min-height: 52px; padding: 10px 14px; font: inherit; color: var(--color-text);
   background: #fff; border: 2px solid var(--color-border); border-radius: var(--radius-small);
 }
+.form input[type="date"][aria-invalid="true"], .form input[type="number"][aria-invalid="true"] { border-color: var(--color-error); background: var(--color-error-soft); }
 .form input[type="file"] { width: 100%; min-height: 52px; padding: 10px; font: inherit; border: 2px dashed var(--color-border); border-radius: var(--radius-small); background: var(--color-bg); }
 .admin-message { margin: 0; padding: 14px 18px; border-radius: var(--radius-small); font-weight: 700; border-left: 6px solid; }
 .admin-message ul { margin: 0; padding-left: 1.2em; }
