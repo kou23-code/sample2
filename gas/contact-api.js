@@ -51,22 +51,31 @@ const sendContactMail = (values, classLabel, receivedAt) => MailApp.sendEmail({
   name: CONTACT_MAIL_SENDER_NAME,
 });
 
-// 送信者（お客様）が入力したメールアドレスへ、受付のお知らせと入力内容の控えを自動返信する
-const sendContactReply = (values, classLabel, receivedAt) => MailApp.sendEmail({
-  to: values.email,
+// 送信者（お客様）が入力したメールアドレス（to）へ、受付のお知らせと入力内容の控えを自動返信する
+const sendContactReply = (to, values, classLabel, receivedAt) => MailApp.sendEmail({
+  to,
   subject: CONTACT_REPLY_SUBJECT,
   body: contactReplyBody(values, classLabel, receivedAt, contactReplySignature()),
   name: CONTACT_MAIL_SENDER_NAME,
 });
 
-// メールが送れなくても（1日の送信上限・宛先の誤りなど）、シートには保存済みのため受付は成功として扱い、記録だけ残す
+// メールが送れなくても（1日の送信上限・宛先の誤り・貼り付けたファイルが古いなど）、シートには保存済みのため
+// 受付全体は止めずに成功として扱い、原因（例外の種類とメッセージ）を GAS の「実行数」に記録する
 const trySendMail = (description, send) => {
   try {
     send();
   } catch (error) {
-    console.error(`${description}を送れませんでした（内容はシートに保存済み）`, error);
+    console.error(`${description}を送れませんでした（内容はシートに保存済み）：${adminErrorDetail(error)}`);
   }
 };
+
+// 宛先のメールアドレスが正しく取れたときだけ自動返信を送る（取れなければ送らずに記録だけ残す）
+// 宛先の取り出しも try の中で行い、どこで失敗しても受付全体（シート保存・通知メール）は止めない
+const trySendContactReply = (values, classLabel, receivedAt) => trySendMail('自動返信メール', () => {
+  const to = contactReplyAddress(values);
+  if (!to) return console.warn('自動返信メールの宛先（フォームの email）が空か、メールアドレスの形ではないため送信しませんでした');
+  return sendContactReply(to, values, classLabel, receivedAt);
+});
 
 // 保存してから、担当者への通知と送信者への自動返信を送る（片方が失敗してももう片方は送る）
 // 同時に送信されてもシートの作成・追記が重ならないよう、書き込みは1件ずつ行う
@@ -77,7 +86,7 @@ const saveContact = (data) => {
   withNewsLock(() => contactSheet().appendRow([...contactToRow(values, classLabel, receivedAt)]));
   recordContactPost();
   trySendMail('通知メール', () => sendContactMail(values, classLabel, receivedAt));
-  trySendMail('自動返信メール', () => sendContactReply(values, classLabel, receivedAt));
+  trySendContactReply(values, classLabel, receivedAt);
   return { ok: true };
 };
 
@@ -85,6 +94,23 @@ const saveContact = (data) => {
 // （Webアプリからは呼ばない。1日に送れる残り通数を読むだけで、メールは送らない）
 function authMail() {
   MailApp.getRemainingDailyQuota();
+}
+
+// 問い合わせの受付に必要なファイル・設定の不足（GAS では const の関数は globalThis から引けないため typeof で1つずつ確かめる）
+const contactSetupProblems = () => [
+  typeof validateForm === 'function' ? '' : '「contact-validate」が無いか古い（js/lib/form-validate.js の内容を貼る）',
+  typeof contactReplyBody === 'function' && typeof contactReplyAddress === 'function'
+    ? '' : '「contact-form」が自動返信に対応していない古い版（gas/contact-form.js の最新の内容に置き換える）',
+  typeof escapeSheetFormula === 'function' && typeof sheetText === 'function' ? '' : '「news-admin」または「news-sheet」が無い',
+  contactNotifyEmail() === CONTACT_NOTIFY_DUMMY_EMAIL ? 'スクリプト プロパティ CONTACT_NOTIFY_EMAIL が未登録（通知がダミー宛てになる）' : '',
+].filter(Boolean);
+
+// 問い合わせ受付の設定を確認する（GASエディタで手動実行。メールは送らず、結果を実行ログに出す）
+function checkContactSetup() {
+  const problems = contactSetupProblems();
+  console.log(problems.length === 0 ? '問い合わせの受付に必要なファイル・設定はそろっています' : `要対応：\n- ${problems.join('\n- ')}`);
+  console.log(`今日あと送れるメールの通数：${MailApp.getRemainingDailyQuota()}`);
+  return problems;
 }
 
 // 問い合わせフォームからの送信（パスワード不要）。誤りがあればシートにもメールにも出さずに返す

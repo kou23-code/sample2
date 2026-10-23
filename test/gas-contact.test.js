@@ -283,3 +283,62 @@ test('authMail は残り送信可能数を読むだけで、メールは送ら�
   vm.runInContext('authMail()', context);
   assert.deepEqual([context.record.quotaChecked, context.record.mails.length], [true, 0]);
 });
+
+// ---- 自動返信が届かないときの切り分け（宛先の確認・古いファイルの検出） ----
+
+// 自動返信に対応する前の contact-form（自動返信の節が無い版）を貼った GAS を再現する
+const OLD_CONTACT_FORM = (source) => source.split('// ---- 送信者への自動返信メール ----')[0];
+
+const loadGasWith = (props, transform) => {
+  const context = vm.createContext(fakeGas(props));
+  GAS_FILES.forEach((file) => vm.runInContext(transform(file, fs.readFileSync(path.join(ROOT, file), 'utf8')), context, { filename: file }));
+  vm.runInContext('record.logs = []; console.error = (m) => record.logs.push(m); console.warn = (m) => record.logs.push(m); console.log = (m) => record.logs.push(m);', context);
+  return context;
+};
+const NOTIFY_PROPS = () => new Map([['CONTACT_NOTIFY_EMAIL', 'staff@example.com']]);
+
+test('フォームの name="email"（送信本文の data.email）が、そのまま自動返信の宛先になる', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'contact.html'), 'utf8');
+  assert.match(html, /<input type="email" id="email" name="email"/);
+  const sent = JSON.parse(inquiryRequestBody(generalValues, ''));
+  const context = loadGas();
+  assert.equal(vm.runInContext(`contactReplyAddress(${JSON.stringify(sent.data)})`, context), 'ichiro@example.com');
+});
+
+test('自動返信の宛先は、メールアドレスの形のときだけ取り出す（空・不正なら空文字＝送らない）', () => {
+  const context = loadGas();
+  const address = (values) => vm.runInContext(`contactReplyAddress(${JSON.stringify(values)})`, context);
+  assert.deepEqual([address({ email: ' a@example.com ' }), address({ email: '' }), address({ email: 'abc' }), address({})],
+    ['a@example.com', '', '', '']);
+});
+
+test('宛先が取れなければ自動返信は送らずに記録だけ残し、通知メールと受付は止めない', () => {
+  const context = loadGasWith(NOTIFY_PROPS(), (file, source) => source);
+  vm.runInContext("saveContact({ inquiryType: 'general', name: '架空 一郎', email: '', tel: '000-000-0000', message: 'x' })", context);
+  assert.deepEqual(context.record.mails.map((mail) => mail.to), ['staff@example.com']);
+  assert.match(context.record.logs.join('\n'), /自動返信メールの宛先.*送信しませんでした/);
+});
+
+test('contact-form が古いままでも受付は成功し、自動返信だけ送れない原因（例外の種類とメッセージ）を記録する', () => {
+  const context = loadGasWith(NOTIFY_PROPS(), (file, source) => (file === 'gas/contact-form.js' ? OLD_CONTACT_FORM(source) : source));
+  assert.deepEqual(postContact(context, generalValues), { ok: true });
+  assert.deepEqual([contactRows(context).length, context.record.mails.map((mail) => mail.to)], [1, ['staff@example.com']]);
+  assert.match(context.record.logs.join('\n'), /自動返信メールを送れませんでした（内容はシートに保存済み）：ReferenceError: contactReplyAddress is not defined/);
+});
+
+test('checkContactSetup は、ファイルと通知先がそろっていれば問題なしと出し、メールは送らない', () => {
+  const context = loadGasWith(NOTIFY_PROPS(), (file, source) => source);
+  vm.runInContext('MailApp.getRemainingDailyQuota = () => 98;', context);
+  assert.deepEqual([...vm.runInContext('checkContactSetup()', context)], []);
+  assert.deepEqual([...context.record.logs], ['問い合わせの受付に必要なファイル・設定はそろっています', '今日あと送れるメールの通数：98']);
+  assert.equal(context.record.mails.length, 0);
+});
+
+test('checkContactSetup は、古い contact-form と未登録の通知先を「要対応」として知らせる', () => {
+  const context = loadGasWith(new Map(), (file, source) => (file === 'gas/contact-form.js' ? OLD_CONTACT_FORM(source) : source));
+  vm.runInContext('MailApp.getRemainingDailyQuota = () => 100;', context);
+  const problems = [...vm.runInContext('checkContactSetup()', context)];
+  assert.equal(problems.length, 2);
+  assert.match(problems[0], /「contact-form」が自動返信に対応していない古い版/);
+  assert.match(problems[1], /CONTACT_NOTIFY_EMAIL が未登録/);
+});
