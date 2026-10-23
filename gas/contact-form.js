@@ -53,10 +53,14 @@ const contactPersonName = (values) => (isTrialInquiry(values.inquiryType) ? valu
 const contactMailSubject = (values) =>
   `【ホームページ】${inquiryTypeLabel(values.inquiryType)}：${contactPersonName(values)} 様`;
 
+// メール本文の入力内容の一覧（「■項目名」の次の行に値）
+const contactRowsText = (values, classLabel) =>
+  contactDisplayRows(values, classLabel).map(([label, text]) => `■${label}\n${text}`);
+
 // 通知メールの本文（全項目と、返信先・保存先の案内）
 const contactMailBody = (values, classLabel, receivedAt) => [
   `ホームページのフォームから${inquiryTypeLabel(values.inquiryType)}が届きました。`, '',
-  ...contactDisplayRows(values, classLabel).map(([label, text]) => `■${label}\n${text}`), '',
+  ...contactRowsText(values, classLabel), '',
   `受付日時：${receivedAt}`,
   `※このメールに返信すると、送信者（${values.email}）宛てになります。`,
   '※内容はスプレッドシートの「お問い合わせ」シートにも保存されています。',
