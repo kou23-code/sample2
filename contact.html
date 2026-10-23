@@ -58,6 +58,7 @@
       <div class="container">
         <div class="section__header"><h2 id="form-heading">Webでのお問い合わせ・体験申込</h2></div>
         <p>24時間受け付けています。担当者より3営業日以内にご連絡します。</p>
+        <p class="urgent-notice">※前日・当日のご予約や、お急ぎのご連絡は、必ずお電話にてお願いいたします。</p>
         <noscript><p class="send-error">フォームのご利用には JavaScript を有効にしてください。お電話でも受け付けています。</p></noscript>
 
         <form id="contact-form" class="form card">
@@ -74,8 +75,15 @@
             <select id="classId" name="classId" data-field="classId" aria-describedby="hint-classId error-classId">
               <option value="">選択してください</option>
             </select>
-            <p class="form-hint" id="hint-classId">ご質問の場合、教室が決まっていなければ「選択してください」のままで大丈夫です。</p>
+            <p class="form-hint" id="hint-classId">一般的なお問い合わせの場合、教室が決まっていなければ「選択してください」のままで大丈夫です。</p>
             <p class="field-error" id="error-classId" data-error-for="classId"></p>
+          </div>
+
+          <div class="form-field" data-trial-only hidden>
+            <label for="preferredDate">体験の希望日<span class="required">必須</span></label>
+            <input type="date" id="preferredDate" name="preferredDate" data-field="preferredDate" aria-describedby="hint-preferredDate error-preferredDate" disabled>
+            <p class="form-hint" id="hint-preferredDate">明後日以降の日付を選択できます。教室の実施曜日は教室案内でご確認ください。</p>
+            <p class="field-error" id="error-preferredDate" data-error-for="preferredDate"></p>
           </div>
 
           <div class="form-field">
@@ -99,9 +107,9 @@
           </div>
 
           <div class="form-field">
-            <label for="message">お問い合わせ内容<span class="required">質問・その他は必須</span></label>
+            <label for="message">お問い合わせ内容<span class="required">一般的なお問い合わせは必須</span></label>
             <textarea id="message" name="message" maxlength="1000" data-field="message" aria-describedby="hint-message error-message"></textarea>
-            <p class="form-hint" id="hint-message">体験申込の場合は、参加される方の学年・年齢や希望日などをご記入ください（任意・1000文字以内）。</p>
+            <p class="form-hint" id="hint-message">体験申込の場合は、参加される方の学年・年齢などをご記入ください（任意・1000文字以内）。</p>
             <p class="field-error" id="error-message" data-error-for="message"></p>
           </div>
 

@@ -91,3 +91,11 @@ test('admin.html のフォームは日付・カテゴリ・タイトル・本文
     assert.match(html, new RegExp(`name="${name}"`), name));
   assert.match(html, /type="file"[^>]*accept="application\/pdf,image\/jpeg,image\/png,image\/gif,image\/webp"/);
 });
+
+test('contact.html：電話への誘導の注意書きと、体験申込用の希望日欄（初期は非表示・無効）を持つ', () => {
+  const html = readPage('contact.html');
+  assert.match(html, /class="urgent-notice">※前日・当日のご予約や、お急ぎのご連絡は、必ずお電話にてお願いいたします。</);
+  assert.ok(html.indexOf('urgent-notice') < html.indexOf('<form id="contact-form"'), '注意書きはフォームより上');
+  assert.match(html, /<div class="form-field" data-trial-only hidden>/);
+  assert.match(html, /<input type="date" id="preferredDate" name="preferredDate"[^>]*disabled>/);
+});

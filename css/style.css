@@ -422,6 +422,8 @@ fieldset[aria-invalid="true"] .choice { border-color: var(--color-error); }
 .demo-notice, .send-error { padding: 14px 18px; border-radius: var(--radius-small); text-align: left; }
 .demo-notice { background: #fff8e6; border-left: 6px solid var(--color-focus); }
 .send-error { background: var(--color-error-soft); border-left: 6px solid var(--color-error); color: var(--color-error); font-weight: 700; }
+/* 前日・当日の予約は電話へ誘導する注意書き（フォーム上部） */
+.urgent-notice { margin: 0 0 20px; padding: 12px 16px; border: 2px solid var(--color-error); border-radius: var(--radius-small); background: var(--color-error-soft); color: var(--color-error); font-weight: 700; }
 
 /* ---------- お知らせ管理画面（admin.html） ---------- */
 
