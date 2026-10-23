@@ -1,4 +1,4 @@
-// 【GAS用】問い合わせフォームから届いた内容をシートに追記し、担当者へ通知メールを送る
+// 【GAS用】問い合わせフォームから届いた内容をシートに追記し、担当者へ通知メール、送信者へ自動返信メールを送る
 // GASエディタに「contact-api」という名前のスクリプトファイルを作り、このファイルの内容を貼り付ける。
 // 入口は news-api.js の doPost（action が 'contact' のリクエストをここへ振り分ける）。
 // シート・メール・キャッシュの操作（副作用）はこのファイルに集約し、組み立ては contact-form.js の純粋関数に任せる。
@@ -8,7 +8,10 @@ const CONTACT_SHEET_NAME = 'お問い合わせ';
 const CONTACT_NOTIFY_EMAIL_KEY = 'CONTACT_NOTIFY_EMAIL';
 const CONTACT_NOTIFY_DUMMY_EMAIL = 'admin@example.com';
 const CONTACT_MAIL_SENDER_NAME = 'ホームページ お問い合わせフォーム';
+// 自動返信メールの署名（任意）。実名を含むためコードには書かず、スクリプト プロパティに登録する
+const CONTACT_REPLY_SIGNATURE_KEY = 'CONTACT_REPLY_SIGNATURE';
 // いたずらの大量送信でメールの1日の上限を使い切らないよう、10分間の受付件数を制限する
+// （1件の受付で通知と自動返信の2通を送る。第三者のアドレス宛てに自動返信を大量に送らせる悪用の防止も兼ねる）
 const CONTACT_RATE_KEY = 'contact-post-count';
 const CONTACT_RATE_MAX = 20;
 const CONTACT_RATE_SECONDS = 600;
@@ -35,6 +38,10 @@ const contactSheet = () => {
   return sheet;
 };
 
+// 自動返信メールの末尾に付ける署名（クラブ名・電話番号など。スクリプト プロパティの値の「\n」は改行にする。未登録なら付けない）
+const contactReplySignature = () =>
+  sheetText(PropertiesService.getScriptProperties().getProperty(CONTACT_REPLY_SIGNATURE_KEY)).replace(/\\n/g, '\n');
+
 // 担当者へ全項目を記載した通知メールを送る（返信すると送信者に届くよう replyTo を付ける）
 const sendContactMail = (values, classLabel, receivedAt) => MailApp.sendEmail({
   to: contactNotifyEmail(),
@@ -44,23 +51,33 @@ const sendContactMail = (values, classLabel, receivedAt) => MailApp.sendEmail({
   name: CONTACT_MAIL_SENDER_NAME,
 });
 
-// メールが送れなくても（1日の送信上限など）、シートには保存済みのため受付は成功として扱い、記録だけ残す
-const trySendContactMail = (values, classLabel, receivedAt) => {
+// 送信者（お客様）が入力したメールアドレスへ、受付のお知らせと入力内容の控えを自動返信する
+const sendContactReply = (values, classLabel, receivedAt) => MailApp.sendEmail({
+  to: values.email,
+  subject: CONTACT_REPLY_SUBJECT,
+  body: contactReplyBody(values, classLabel, receivedAt, contactReplySignature()),
+  name: CONTACT_MAIL_SENDER_NAME,
+});
+
+// メールが送れなくても（1日の送信上限・宛先の誤りなど）、シートには保存済みのため受付は成功として扱い、記録だけ残す
+const trySendMail = (description, send) => {
   try {
-    sendContactMail(values, classLabel, receivedAt);
+    send();
   } catch (error) {
-    console.error('通知メールを送れませんでした（内容はシートに保存済み）', error);
+    console.error(`${description}を送れませんでした（内容はシートに保存済み）`, error);
   }
 };
 
-// 保存してから通知する（同時に送信されてもシートの作成・追記が重ならないよう1件ずつ行う）
+// 保存してから、担当者への通知と送信者への自動返信を送る（片方が失敗してももう片方は送る）
+// 同時に送信されてもシートの作成・追記が重ならないよう、書き込みは1件ずつ行う
 const saveContact = (data) => {
   const values = normalizeFormValues(data);
   const classLabel = contactClassLabel(data);
   const receivedAt = contactReceivedAt(new Date());
   withNewsLock(() => contactSheet().appendRow([...contactToRow(values, classLabel, receivedAt)]));
   recordContactPost();
-  trySendContactMail(values, classLabel, receivedAt);
+  trySendMail('通知メール', () => sendContactMail(values, classLabel, receivedAt));
+  trySendMail('自動返信メール', () => sendContactReply(values, classLabel, receivedAt));
   return { ok: true };
 };
 
