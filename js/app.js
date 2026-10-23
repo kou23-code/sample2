@@ -8,6 +8,8 @@ const NEWS_ITEMS = prepareNews(NEWS_DATA, NEWS_CATEGORIES);
 const NEWS_FETCH_TIMEOUT_MS = 5000;
 // トップページの「最新のお知らせ」に表示する件数
 const TOP_NEWS_COUNT = 5;
+// お問い合わせの送信を打ち切るまでの時間（GAS はシート書き込みとメール送信で数秒かかることがある）
+const INQUIRY_FETCH_TIMEOUT_MS = 20000;
 
 // 誤りのあるお知らせは表示せず、直し方をコンソールに出す（使えない添付URLは、添付だけ出さずに知らせる）
 const warnNewsProblems = (entries, source) => {
@@ -156,12 +158,21 @@ const showErrors = (form, errors) => {
   return firstField && form.querySelector(`[name="${firstField}"]`)?.focus();
 };
 
-const postInquiry = (endpoint, values) =>
-  fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify(values),
-  }).then((response) => (response.ok ? 'sent' : Promise.reject(new Error(`HTTP ${response.status}`))));
+// 希望教室の表示名（通知メール・シートで読めるように添える。未選択なら空）
+const classLabelOf = (classId) => {
+  const item = CLASSES_DATA.find((entry) => entry.id === classId);
+  return item ? classDisplayName(item) : '';
+};
+
+// GAS の Webアプリへ送り、{ ok: true } が返れば成功（GAS は誤りがあっても HTTP 200 で { ok: false, errors } を返す）
+const postInquiry = (endpoint, values) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), INQUIRY_FETCH_TIMEOUT_MS);
+  return fetch(endpoint, { method: 'POST', body: inquiryRequestBody(values, classLabelOf(values.classId)), signal: controller.signal })
+    .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
+    .then((json) => (isInquiryAccepted(json) ? 'sent' : Promise.reject(new Error((json?.errors ?? []).join('／') || '応答の形式が違います'))))
+    .finally(() => clearTimeout(timer));
+};
 
 const showCompletion = (doc, values, isDemo) => {
   const section = doc.getElementById('form-complete');
@@ -172,16 +183,20 @@ const showCompletion = (doc, values, isDemo) => {
   section.querySelector('[tabindex="-1"]').focus();
 };
 
-const showSendError = (doc, form) => {
+const showSendError = (doc, form, error) => {
+  console.warn('お問い合わせを送信できませんでした：', error);
   doc.getElementById('send-error').hidden = false;
   form.querySelector('[type="submit"]').disabled = false;
 };
 
+// 送信先（formEndpoint、無ければ newsEndpoint の GAS）が未設定ならデモとして完了画面だけ出す
 const submitInquiry = (doc, form, config, values) => {
+  const endpoint = inquiryEndpoint(config);
   form.querySelector('[type="submit"]').disabled = true;
-  return (config.formEndpoint ? postInquiry(config.formEndpoint, values) : Promise.resolve('demo'))
+  doc.getElementById('send-error').hidden = true;
+  return (endpoint ? postInquiry(endpoint, values) : Promise.resolve('demo'))
     .then((mode) => showCompletion(doc, values, mode === 'demo'))
-    .catch(() => showSendError(doc, form));
+    .catch((error) => showSendError(doc, form, error));
 };
 
 const handleSubmit = (event, doc, config) => {
