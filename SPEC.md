@@ -99,7 +99,7 @@
 | `venue` | 活動拠点 | `さくら町スポーツセンター（架空）` |
 | `copyrightYear` | 著作権表示の年 | `2026` |
 | `formEndpoint` | フォーム送信先URL（通常は空のままでよい。別の送信先を使う場合だけ指定） | `''`（空なら `newsEndpoint` の GAS へ送る。どちらも `http(s)://` でなければ送信しない＝デモ） |
-| `newsEndpoint` | お知らせの取得先・問い合わせの送信先（GAS の Webアプリの URL）。`config.js` は GitHub Pages に配信されないため、公開用の URL は `js/default-config.js` に書く（ブラウザから見える値で秘密情報ではない） | `''`（空・`http(s)://` 以外の仮の値＝取得せず予備データを表示） |
+| `newsEndpoint` | お知らせの取得先・問い合わせの送信先（GAS の Webアプリの URL）。`config.js` は GitHub Pages に配信されないため、公開用の URL は `js/default-config.js` に書く（ブラウザから見える値で秘密情報ではない） | 運用中の GAS の URL（`https://script.google.com/macros/s/…/exec`）。`config.js` で `http(s)://` 以外の仮の値に上書きすると、取得せず予備データを表示し、問い合わせは送信しない（デモ） |
 
 ### 4.2 上書きの手順
 
