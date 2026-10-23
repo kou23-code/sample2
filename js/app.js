@@ -174,36 +174,80 @@ const postInquiry = (endpoint, values) => {
     .finally(() => clearTimeout(timer));
 };
 
-const showCompletion = (doc, values, isDemo) => {
-  const section = doc.getElementById('form-complete');
-  renderHtml(doc.getElementById('complete-summary'), completionTableHtml(completionRows(values, CLASSES_DATA)));
-  doc.getElementById('demo-notice').hidden = !isDemo;
-  doc.getElementById('contact-form').hidden = true;
-  section.hidden = false;
-  section.querySelector('[tabindex="-1"]').focus();
+// 入力画面・確認画面・完了画面のうち、指定した1つだけを表示する
+const CONTACT_STEP_IDS = Object.freeze(['contact-form', 'form-confirm', 'form-complete']);
+const showContactStep = (doc, activeId) =>
+  CONTACT_STEP_IDS.forEach((id) => (doc.getElementById(id).hidden = id !== activeId));
+
+// 入力欄の今の値を検証する（入力画面の「確認する」と、確認画面の「送信する」の両方で使う）
+const validateContactForm = (form) =>
+  validateForm(Object.fromEntries(new FormData(form)), CLASS_IDS, earliestTrialDate(new Date()));
+
+// 確認画面：入力内容をテキストの一覧で表示し、見出しへフォーカスを移す（入力欄は非表示にするだけで値は残す）
+const showConfirm = (doc, values) => {
+  renderHtml(doc.getElementById('confirm-summary'), completionTableHtml(completionRows(values, CLASSES_DATA)));
+  doc.getElementById('send-error').hidden = true;
+  showContactStep(doc, 'form-confirm');
+  doc.getElementById('confirm-heading').focus();
 };
 
-const showSendError = (doc, form, error) => {
+// 「入力画面に戻る」：入力済みの値はそのままで入力画面に戻し、先頭の種別へフォーカスを移す
+const backToInput = (doc) => {
+  showContactStep(doc, 'contact-form');
+  doc.querySelector('#contact-form [name="inquiryType"]:checked')?.focus();
+};
+
+// 送信中は確認画面の2つのボタンを押せなくする（二重送信の防止）
+const setConfirmBusy = (doc, busy) =>
+  ['confirm-back', 'confirm-send'].forEach((id) => (doc.getElementById(id).disabled = busy));
+
+const showCompletion = (doc, values, isDemo) => {
+  renderHtml(doc.getElementById('complete-summary'), completionTableHtml(completionRows(values, CLASSES_DATA)));
+  doc.getElementById('demo-notice').hidden = !isDemo;
+  showContactStep(doc, 'form-complete');
+  doc.getElementById('complete-heading').focus();
+};
+
+// 送信に失敗したら確認画面のまま電話案内付きのエラーを出し、もう一度押せるようにする
+const showSendError = (doc, error) => {
   console.warn('お問い合わせを送信できませんでした：', error);
   doc.getElementById('send-error').hidden = false;
-  form.querySelector('[type="submit"]').disabled = false;
+  setConfirmBusy(doc, false);
 };
 
 // 送信先（formEndpoint、無ければ newsEndpoint の GAS）が未設定ならデモとして完了画面だけ出す
-const submitInquiry = (doc, form, config, values) => {
+const submitInquiry = (doc, config, values) => {
   const endpoint = inquiryEndpoint(config);
-  form.querySelector('[type="submit"]').disabled = true;
+  setConfirmBusy(doc, true);
   doc.getElementById('send-error').hidden = true;
   return (endpoint ? postInquiry(endpoint, values) : Promise.resolve('demo'))
     .then((mode) => showCompletion(doc, values, mode === 'demo'))
-    .catch((error) => showSendError(doc, form, error));
+    .catch((error) => showSendError(doc, error));
 };
 
-const handleSubmit = (event, doc, config) => {
+// 入力画面の「入力内容を確認する」：誤りがあれば入力画面のままエラーを表示し、なければ確認画面へ進む（まだ送信しない）
+const handleSubmit = (event, doc) => {
   event.preventDefault();
-  const result = validateForm(Object.fromEntries(new FormData(event.target)), CLASS_IDS, earliestTrialDate(new Date()));
+  const result = validateContactForm(event.target);
   showErrors(event.target, result.errors);
-  return result.valid && submitInquiry(doc, event.target, config, result.values);
+  return result.valid && showConfirm(doc, result.values);
+};
+
+// 確認画面の「この内容で送信する」：入力欄の値を読み直して再検証し（日付の切り替わり等に備える）、問題なければ GAS へ送る
+const handleConfirmSend = (doc, config) => {
+  const form = doc.getElementById('contact-form');
+  const result = validateContactForm(form);
+  if (result.valid) return submitInquiry(doc, config, result.values);
+  backToInput(doc);
+  return showErrors(form, result.errors);
+};
+
+// 入力画面の「確認する」と、確認画面の「戻る」「送信する」のイベントを登録する（必須チェックはブラウザ標準ではなく validateForm で行う）
+const setupContactSteps = (doc, form, config) => {
+  form.setAttribute('novalidate', '');
+  form.addEventListener('submit', (event) => handleSubmit(event, doc));
+  doc.getElementById('confirm-back').addEventListener('click', () => backToInput(doc));
+  doc.getElementById('confirm-send').addEventListener('click', () => handleConfirmSend(doc, config));
 };
 
 // 種別専用のコンテナ（data-inquiry-only="種別ID"）の表示と、中の入力欄の required・disabled を連動させる
@@ -234,8 +278,7 @@ const initContactPage = (doc, config) => {
   renderHtml(form.elements.classId, classOptionsHtml(CLASSES_DATA, query.classId));
   renderHtml(form.elements.grade, gradeOptionsHtml(GRADES));
   setupInquiryFields(form);
-  form.setAttribute('novalidate', '');
-  form.addEventListener('submit', (event) => handleSubmit(event, doc, config));
+  setupContactSteps(doc, form, config);
 };
 
 // ---- 起動 ----

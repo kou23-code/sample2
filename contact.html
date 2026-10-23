@@ -165,11 +165,21 @@
           </fieldset>
 
           <div>
-            <button type="submit" class="button button--accent">入力内容を送信する</button>
+            <button type="submit" class="button button--accent">入力内容を確認する</button>
           </div>
         </form>
 
-        <div id="send-error" class="send-error" role="alert" hidden>送信できませんでした。時間をおいてもう一度お試しいただくか、お電話でお問い合わせください。</div>
+        <!-- 送信前の確認画面（入力に誤りがないときだけ表示。ここで「この内容で送信する」を押したときだけ GAS へ送る） -->
+        <section id="form-confirm" class="confirm card" aria-labelledby="confirm-heading" hidden>
+          <h2 id="confirm-heading" class="confirm__title" tabindex="-1">入力内容の確認</h2>
+          <p>以下の内容でよろしければ「この内容で送信する（確定）」を押してください。<br>修正する場合は「入力画面に戻る（修正する）」を押してください。</p>
+          <div id="confirm-summary"></div>
+          <div id="send-error" class="send-error" role="alert" hidden>送信できませんでした。時間をおいてもう一度お試しいただくか、お電話でお問い合わせください。</div>
+          <div class="confirm__actions">
+            <button type="button" id="confirm-back" class="button button--outline">入力画面に戻る（修正する）</button>
+            <button type="button" id="confirm-send" class="button button--accent">この内容で送信する（確定）</button>
+          </div>
+        </section>
 
         <section id="form-complete" class="complete card" aria-labelledby="complete-heading" hidden>
           <h2 id="complete-heading" class="complete__title" tabindex="-1">送信が完了しました</h2>

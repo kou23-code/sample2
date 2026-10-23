@@ -332,11 +332,18 @@
 - 完了画面の入力内容一覧は、選ばれた種別の項目だけを並べる（希望日は「2026年11月3日」、学年は表示名、年齢は「8歳」の形式）。
 - 入力値は前後の空白を除去してから検証し、選ばれた種別の項目だけを検証する（`validateForm` は `{ valid, values, errors }` を返す）。
 - エラー時：項目ごとに赤字のメッセージ、`aria-invalid="true"`、フォーム上部にエラー件数（`role="alert"`）を表示し、最初のエラー項目へフォーカスする。
+- 画面の流れ（入力 → 確認 → 完了。`showContactStep` で `#contact-form`・`#form-confirm`・`#form-complete` のうち1つだけを表示）：
+  1. 入力画面の送信ボタンは「入力内容を確認する」。押すと `validateContactForm`（`validateForm` を今の入力値で実行）で検証し、誤りがあれば入力画面のままエラーを表示する。**この時点では送信しない。**
+  2. 誤りがなければ入力フォームを非表示にし、確認画面 `<section id="form-confirm">` に入力内容をテキストの一覧（完了画面と同じ `completionTableHtml(completionRows(...))`。選ばれた種別の項目だけ）で表示して、見出し「入力内容の確認」へフォーカスを移す。
+  3. 確認画面の下部に「入力画面に戻る（修正する）」（`#confirm-back`）と「この内容で送信する（確定）」（`#confirm-send`）の2つのボタンを置く。
+  4. 「入力画面に戻る」：入力フォームを再表示する。入力欄は非表示にしていただけなので、入力済みの値はそのまま残る。先頭の種別のラジオボタンへフォーカスを移す。
+  5. 「この内容で送信する」：入力欄の値を読み直して再検証し（確認画面にいる間の日付の切り替わり等に備える）、問題なければ `submitInquiry` で送信する。誤りがあれば入力画面に戻してエラーを表示する。**GAS への送信（fetch）はこのボタンを押したときだけ行う。**
+  6. 送信中は確認画面の2つのボタンを押せなくし（`setConfirmBusy`・二重送信の防止）、成功したら完了画面、失敗したら確認画面のまま電話案内付きのエラー（`#send-error`）を表示してボタンを戻す。
 - 送信（`app.js` の `submitInquiry`・`postInquiry`）：
   - 送信先は `inquiryEndpoint(config)`：`formEndpoint` → `newsEndpoint`（お知らせと同じ GAS の Webアプリ）の順で、`http(s)://` で始まる最初の値。
   - 送信先が無い（既定）場合：どこにも送信せず、完了画面に「デモ設定のため送信・保存されていません」と表示する。
   - 送信先がある場合：`fetch` の POST で本文 `inquiryRequestBody(values, classLabel)` ＝ `{ "action": "contact", "data": { 入力値…, "classLabel": 希望教室の表示名 } }` を送る。`Content-Type` を付けない（`text/plain` の単純なリクエストにして、GAS が応じない CORS の事前確認を避ける）。20秒（`INQUIRY_FETCH_TIMEOUT_MS`）で打ち切る。
-  - 応答が `{ ok: true }`（`isInquiryAccepted`）なら完了画面、HTTP エラー・`{ ok: false, errors }`・通信失敗・タイムアウトなら送信ボタンを戻し、電話案内付きのエラーを表示して `console.warn` に理由を出す。再送信時はエラー表示を消す。
+  - 応答が `{ ok: true }`（`isInquiryAccepted`）なら完了画面、HTTP エラー・`{ ok: false, errors }`・通信失敗・タイムアウトなら確認画面の「戻る」「送信する」ボタンを戻し、確認画面に電話案内付きのエラーを表示して `console.warn` に理由を出す。再送信時はエラー表示を消す。
 
 #### GAS での受付（F-010・`gas/contact-form.js`／`gas/contact-api.js`）
 
@@ -457,3 +464,4 @@
 | 2026-10-23 | 問い合わせの受付時に、送信者へ入力内容の控えを記載した自動返信メールを送る処理を追加（署名はスクリプト プロパティ `CONTACT_REPLY_SIGNATURE`） |
 | 2026-10-23 | GitHub Pages で `config.js` が配信されず、問い合わせがデモ扱いで送信されない（お知らせも予備データになる）不具合を修正：GAS の URL を `js/default-config.js` に設定し、`config-sample.js` の仮 URL をコメントアウト。GAS にメール送信の権限を承認する `authMail` を追加 |
 | 2026-10-23 | 自動返信メールだけが送られない不具合に対応：宛先（`data.email`）が正しく取れたときだけ送り、宛先の取得も含めて `try...catch` で保護。失敗の原因（例外の種類とメッセージ）を記録し、古い `contact-form` などを検出する `checkContactSetup` を追加 |
+| 2026-10-23 | 問い合わせフォームに送信前の確認画面を追加（「入力内容を確認する」で検証・一覧表示、「入力画面に戻る」で値を保ったまま修正、「この内容で送信する」を押したときだけ GAS へ送信） |

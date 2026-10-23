@@ -416,6 +416,12 @@ fieldset[aria-invalid="true"] .choice { border-color: var(--color-error); }
 .complete { text-align: center; }
 .complete__title { color: var(--color-green); }
 .complete__title:focus { outline: none; }
+/* 送信前の確認画面（戻る・送信の2ボタンは横並び、スマホでは縦に並べて押しやすくする） */
+.confirm__title { color: var(--color-primary-dark); }
+.confirm__title:focus { outline: none; }
+.confirm .send-error { margin-bottom: 16px; }
+.confirm__actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.confirm__actions .button { flex: 1 1 260px; max-width: 360px; }
 .summary-list { margin: 20px 0; text-align: left; display: grid; gap: 0; border: 1px solid var(--color-border); border-radius: var(--radius-small); overflow: hidden; }
 .summary-list div { display: grid; grid-template-columns: minmax(6em, 30%) 1fr; }
 .summary-list dt, .summary-list dd { margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--color-border); }
