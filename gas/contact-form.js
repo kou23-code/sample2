@@ -71,6 +71,12 @@ const contactMailBody = (values, classLabel, receivedAt) => [
 const CONTACT_REPLY_SUBJECT = '【自動送信】お問い合わせ・体験申込を受け付けました';
 const CONTACT_REPLY_DIVIDER = '――――――――――――――――――――';
 
+// 自動返信の宛先：フォームの name="email"（送信本文の data.email）の値。メールアドレスの形でなければ空（＝送らない）
+const contactReplyAddress = (values) => {
+  const address = sheetText(values?.email);
+  return isEmail(address) ? address : '';
+};
+
 // 自動返信の冒頭（宛名と挨拶）
 const contactReplyGreeting = (values) => [
   `${contactPersonName(values)} 様`, '',
