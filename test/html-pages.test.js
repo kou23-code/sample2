@@ -118,3 +118,14 @@ test('contact.html：共通項目（メール・電話・内容・同意）は�
   const html = readPage('contact.html');
   ['email', 'tel', 'message', 'agree'].forEach((field) => assert.match(html, new RegExp(`name="${field}"[^>]*required`), field));
 });
+
+test('contact.html：送信ボタンは「入力内容を確認する」で、確認画面（初期は非表示）に「戻る」「送信する」の2つのボタンがある', () => {
+  const html = readPage('contact.html');
+  assert.match(html, /<button type="submit" class="button button--accent">入力内容を確認する<\/button>/);
+  const confirm = html.slice(html.indexOf('<section id="form-confirm"'), html.indexOf('<section id="form-complete"'));
+  assert.match(confirm, /^<section id="form-confirm" class="confirm card" aria-labelledby="confirm-heading" hidden>/);
+  assert.match(confirm, /id="confirm-summary"/);
+  assert.match(confirm, /<button type="button" id="confirm-back"[^>]*>入力画面に戻る（修正する）<\/button>/);
+  assert.match(confirm, /<button type="button" id="confirm-send"[^>]*>この内容で送信する（確定）<\/button>/);
+  assert.match(confirm, /id="send-error"/);
+});

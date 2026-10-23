@@ -204,3 +204,30 @@ test('GAS が ok: false や HTTP エラーを返したら送信失敗として�
     vm.runInContext("postInquiry('https://example.invalid/exec', {}).then(() => 'sent', (error) => error.message)", loadScripts(fakeInquiryBrowser(reply)))));
   assert.deepEqual(results, ['電話番号を入力してください', 'HTTP 500']);
 });
+
+// ---- お問い合わせの確認画面（要素は id で引ける最小限の偽物） ----
+
+const fakeStepDoc = () => {
+  const elements = Object.fromEntries(['contact-form', 'form-confirm', 'form-complete', 'confirm-back', 'confirm-send']
+    .map((id) => [id, { hidden: id !== 'contact-form', disabled: false }]));
+  return { elements, getElementById: (id) => elements[id] };
+};
+
+test('入力・確認・完了の画面は、指定した1つだけを表示する', () => {
+  const doc = fakeStepDoc();
+  const show = vm.runInContext('showContactStep', loadScripts(''));
+  const visible = () => ['contact-form', 'form-confirm', 'form-complete'].filter((id) => !doc.elements[id].hidden);
+  show(doc, 'form-confirm');
+  assert.deepEqual(visible(), ['form-confirm']);
+  show(doc, 'contact-form');
+  assert.deepEqual(visible(), ['contact-form']);
+});
+
+test('送信中は確認画面の「戻る」「送信する」を押せなくし、終われば戻す（二重送信の防止）', () => {
+  const doc = fakeStepDoc();
+  const setBusy = vm.runInContext('setConfirmBusy', loadScripts(''));
+  setBusy(doc, true);
+  assert.deepEqual([doc.elements['confirm-back'].disabled, doc.elements['confirm-send'].disabled], [true, true]);
+  setBusy(doc, false);
+  assert.deepEqual([doc.elements['confirm-back'].disabled, doc.elements['confirm-send'].disabled], [false, false]);
+});
