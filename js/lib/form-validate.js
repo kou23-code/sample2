@@ -44,8 +44,8 @@ const fieldsForType = (typeId) =>
   FORM_FIELDS.filter((field) => (TYPE_ONLY_FIELDS[field] ?? typeId) === typeId);
 
 // Date を端末の現地時刻の YYYY-MM-DD にする
-const pad2 = (number) => String(number).padStart(2, '0');
-const toIsoDate = (date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+const padTwoDigits = (number) => String(number).padStart(2, '0');
+const toIsoDate = (date) => `${date.getFullYear()}-${padTwoDigits(date.getMonth() + 1)}-${padTwoDigits(date.getDate())}`;
 const isIsoDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && toIsoDate(new Date(`${value}T00:00:00`)) === value;
 
 // 体験の希望日として選べる最初の日（今日を渡すと明後日の YYYY-MM-DD を返す。引数は変更しない）
@@ -123,9 +123,27 @@ const parseContactQuery = (search, classIds) => {
   return Object.freeze({ type: typeId || (classId ? 'trial' : ''), classId });
 };
 
+// ---- GAS への送信（このファイルは GAS にも貼り付け、受け取る側の検証とリクエストの判定に共用する） ----
+
+// お知らせ管理（action: login/list/create）と区別するための操作名
+const CONTACT_ACTION = 'contact';
+const isHttpUrl = (url) => /^https?:\/\/\S+$/.test(String(url ?? '').trim());
+
+// 送信先：formEndpoint があればそれを、無ければお知らせと同じ GAS の Webアプリ（newsEndpoint）を使う（どちらも無ければ空＝デモ）
+const inquiryEndpoint = (config) =>
+  [config?.formEndpoint, config?.newsEndpoint].find(isHttpUrl)?.trim() ?? '';
+
+// 送信する本文（text/plain の JSON。GAS は CORS の事前確認に応じないため Content-Type を付けない）
+// classLabel は希望教室の表示名（教室の一覧はサイト側にしかないため、通知メール・シート用に添える）
+const inquiryRequestBody = (values, classLabel) => JSON.stringify({ action: CONTACT_ACTION, data: { ...values, classLabel } });
+
+const isContactRequest = (request) => request?.action === CONTACT_ACTION;
+const isInquiryAccepted = (json) => json?.ok === true;
+
 if (typeof module === 'object' && module.exports) {
   module.exports = {
     INQUIRY_TYPES, GRADES, FORM_FIELDS, TYPE_ONLY_FIELDS, isBlank, isEmail, isTel, isAge, isTrialInquiry, isIsoDate,
     fieldsForType, earliestTrialDate, normalizeFormValues, validateForm, inquiryTypeLabel, gradeLabel, parseContactQuery,
+    CONTACT_ACTION, inquiryEndpoint, inquiryRequestBody, isContactRequest, isInquiryAccepted,
   };
 }

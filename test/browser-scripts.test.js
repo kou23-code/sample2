@@ -165,3 +165,29 @@ test('種別が未選択なら、どちらの専用項目も非表示・必須�
   vm.runInContext('toggleInquiryFields', loadScripts(''))(form);
   assert.deepEqual(groupStates(form), [['trial', false, false, true], ['general', false, false, true]]);
 });
+
+// ---- お問い合わせの送信（fetch は記録するだけの偽物） ----
+
+const fakeInquiryBrowser = (response) => `
+  class AbortController { constructor() { this.signal = {}; } abort() {} }
+  const setTimeout = () => 0;
+  const clearTimeout = () => {};
+  const sentRequests = [];
+  const fetch = (url, options) => { sentRequests.push({ url, options }); return Promise.resolve(${response}); };`;
+const gasReply = (json) => `{ ok: true, json: () => Promise.resolve(${json}) }`;
+
+test('お問い合わせは GAS へ text/plain の JSON（Content-Type なし）で送り、希望教室の表示名を添える', async () => {
+  const context = loadScripts(fakeInquiryBrowser(gasReply('{ ok: true }')));
+  const result = await vm.runInContext("postInquiry('https://example.invalid/exec', { inquiryType: 'trial', classId: 'play' })", context);
+  const [request] = vm.runInContext('sentRequests', context);
+  assert.equal(result, 'sent');
+  assert.deepEqual([request.url, request.options.method, request.options.headers], ['https://example.invalid/exec', 'POST', undefined]);
+  assert.deepEqual(JSON.parse(request.options.body), { action: 'contact', data: { inquiryType: 'trial', classId: 'play', classLabel: '運動あそび教室' } });
+});
+
+test('GAS が ok: false や HTTP エラーを返したら送信失敗として扱う', async () => {
+  const failures = [gasReply("{ ok: false, errors: ['電話番号を入力してください'] }"), '{ ok: false, status: 500 }'];
+  const results = await Promise.all(failures.map((reply) =>
+    vm.runInContext("postInquiry('https://example.invalid/exec', {}).then(() => 'sent', (error) => error.message)", loadScripts(fakeInquiryBrowser(reply)))));
+  assert.deepEqual(results, ['電話番号を入力してください', 'HTTP 500']);
+});

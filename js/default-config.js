@@ -9,7 +9,7 @@ const DEFAULT_CONFIG = Object.freeze({
   access: '架空鉄道みどり線「さくら町駅」から徒歩約10分',
   venue: 'さくら町スポーツセンター（架空）',
   copyrightYear: '2026',
-  // フォーム送信先（外部フォームサービスのURL）。空の場合は送信せず完了表示のみ行う
+  // 問い合わせフォームの送信先。空なら newsEndpoint の GAS へ送り、どちらも無ければ送信せず完了表示のみ行う（デモ）
   formEndpoint: '',
   // お知らせの取得先（GAS の Webアプリの URL。末尾が /exec）。空の場合は js/data/news-data.js を表示する
   newsEndpoint: '',

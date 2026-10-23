@@ -1,4 +1,4 @@
-// 【GAS用】お知らせをJSONで返すWebアプリの入口
+// 【GAS用】お知らせをJSONで返すWebアプリの入口（POST はお知らせ管理画面と問い合わせフォームに振り分ける）
 // GASエディタに「news-api」という名前のスクリプトファイルを作り、このファイルの内容を貼り付ける。
 // シートの読み取り・キャッシュ・応答の作成（副作用）はこのファイルに集約し、変換は news-sheet.js の純粋関数に任せる。
 // ※ doGet / onEdit / setupNewsSheet は GAS から呼び出すため function 宣言にしている。
@@ -168,14 +168,25 @@ const handleAdminRequest = (request) => {
   return passwordError ? { ok: false, auth: false, errors: [passwordError] } : action(request.data);
 };
 
-// 管理画面からの POST（本文は text/plain の JSON）に応答する
-// 例外が起きたときは、原因を特定できるよう例外の種類とメッセージを detail として返す（GAS の「実行数」にも記録される）
+// ---- POST の振り分け ----
+
+// 本文の action で振り分ける：'contact' は問い合わせフォーム（contact-api.js・パスワード不要）、それ以外はお知らせ管理画面
+const routePostRequest = (request) =>
+  isContactRequest(request) ? handleContactRequest(request.data) : handleAdminRequest(request);
+
+// 例外時の応答。原因を特定するための detail（例外の種類とメッセージ）は職員が使う管理画面にだけ返し、一般公開のフォームには返さない
+const postErrorResult = (request, error) =>
+  isContactRequest(request)
+    ? { ok: false, errors: ['送信できませんでした。お手数ですがお電話でお問い合わせください'] }
+    : { ok: false, errors: ['処理中にエラーが発生しました。時間をおいてもう一度お試しください'], detail: adminErrorDetail(error) };
+
+// 管理画面・問い合わせフォームからの POST（本文は text/plain の JSON）に応答する（例外は GAS の「実行数」にも記録される）
 function doPost(e) {
+  const request = parseAdminRequest(e?.postData?.contents);
   try {
-    return jsonOutput(JSON.stringify(handleAdminRequest(parseAdminRequest(e?.postData?.contents))));
+    return jsonOutput(JSON.stringify(routePostRequest(request)));
   } catch (error) {
     console.error(error);
-    const message = '処理中にエラーが発生しました。時間をおいてもう一度お試しください';
-    return jsonOutput(JSON.stringify({ ok: false, errors: [message], detail: adminErrorDetail(error) }));
+    return jsonOutput(JSON.stringify(postErrorResult(request, error)));
   }
 }
