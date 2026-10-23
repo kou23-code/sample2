@@ -353,6 +353,8 @@
 
   - 受付日時は GAS のタイムゾーンで `yyyy-MM-dd HH:mm:ss`。種別・学年は日本語名、年齢は「8歳」、希望教室はサイトから届いた表示名（無ければ教室ID、100文字まで）。その種別で使わない列は空欄。対応状況は「未対応」で追加する（職員が手で更新する）。
   - 先頭が `= + - @` の値は `escapeSheetFormula` で先頭に `'` を付け、数式として実行させない。
+- 自動返信の宛先（`contactReplyAddress`）：フォームの `name="email"` → 送信本文の `data.email` → `values.email`（GAS は `e.parameter` ではなく `e.postData.contents` の JSON から読む）。メールアドレスの形でなければ送らずに `console.warn` で記録する。宛先の取り出しから送信までを `trySendMail` の `try...catch` の中で行い、どこで失敗してもシート保存・通知メール・応答（`{ ok: true }`）は止めない。失敗時は `「自動返信メールを送れませんでした（内容はシートに保存済み）：例外の種類: メッセージ」` を記録する。
+- 設定の確認：`checkContactSetup`（GASエディタで手動実行。メールは送らない）が、`contact-validate`・`contact-form`（自動返信対応版か）・`news-admin`／`news-sheet` の有無と `CONTACT_NOTIFY_EMAIL` の登録を確かめ、結果と当日の残り送信可能数を実行ログに出す。
 - メール送信の権限の承認：`gas/contact-api.js` の `authMail`（`MailApp.getRemainingDailyQuota()` を呼ぶだけでメールは送らない）を GASエディタで一度手動実行し、OAuth スコープ（ユーザーとしてメールを送信）を承認してから「新バージョン」でデプロイする。
 - 通知メール：`MailApp.sendEmail` で、宛先はスクリプト プロパティ `CONTACT_NOTIFY_EMAIL`（カンマ区切りで複数可。未登録なら仮置きのダミー `admin@example.com`）、件名は `【ホームページ】種別：申込者名 様`（体験申込は保護者名、一般はお名前）、本文は選ばれた種別の全項目（`■項目名` の次の行に値）と受付日時、`replyTo` は送信者のメールアドレス。
 - 自動返信メール（通知メールの次に送る）：宛先は送信者が入力したメールアドレス、件名は `【自動送信】お問い合わせ・体験申込を受け付けました`（`CONTACT_REPLY_SUBJECT`）、差出人名は通知メールと同じ。本文（`contactReplyBody`）は次の順。
@@ -454,3 +456,4 @@
 | 2026-10-23 | 問い合わせの受付を GAS に実装（シート「お問い合わせ」への追記・通知メール・`doPost` の振り分け）し、フォームから GAS へ送信する連携を追加 |
 | 2026-10-23 | 問い合わせの受付時に、送信者へ入力内容の控えを記載した自動返信メールを送る処理を追加（署名はスクリプト プロパティ `CONTACT_REPLY_SIGNATURE`） |
 | 2026-10-23 | GitHub Pages で `config.js` が配信されず、問い合わせがデモ扱いで送信されない（お知らせも予備データになる）不具合を修正：GAS の URL を `js/default-config.js` に設定し、`config-sample.js` の仮 URL をコメントアウト。GAS にメール送信の権限を承認する `authMail` を追加 |
+| 2026-10-23 | 自動返信メールだけが送られない不具合に対応：宛先（`data.email`）が正しく取れたときだけ送り、宛先の取得も含めて `try...catch` で保護。失敗の原因（例外の種類とメッセージ）を記録し、古い `contact-form` などを検出する `checkContactSetup` を追加 |
