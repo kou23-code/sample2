@@ -186,9 +186,24 @@ const submitInquiry = (doc, form, config, values) => {
 
 const handleSubmit = (event, doc, config) => {
   event.preventDefault();
-  const result = validateForm(Object.fromEntries(new FormData(event.target)), CLASS_IDS);
+  const result = validateForm(Object.fromEntries(new FormData(event.target)), CLASS_IDS, earliestTrialDate(new Date()));
   showErrors(event.target, result.errors);
   return result.valid && submitInquiry(doc, event.target, config, result.values);
+};
+
+// 体験申込のときだけ希望日欄を表示・必須にし、それ以外は非表示・無効化する（無効の欄は送信されない）
+const toggleTrialDate = (form) => {
+  const isTrial = isTrialInquiry(form.elements.inquiryType.value);
+  form.querySelector('[data-trial-only]').hidden = !isTrial;
+  form.elements.preferredDate.disabled = !isTrial;
+  form.elements.preferredDate.required = isTrial;
+};
+
+// 希望日は明後日以降だけ選べるようにし、種別の変更に合わせて表示を切り替える
+const setupTrialDate = (form) => {
+  form.elements.preferredDate.min = earliestTrialDate(new Date());
+  form.addEventListener('change', (event) => event.target.name === 'inquiryType' && toggleTrialDate(form));
+  toggleTrialDate(form);
 };
 
 const initContactPage = (doc, config) => {
@@ -196,6 +211,7 @@ const initContactPage = (doc, config) => {
   const query = parseContactQuery(doc.defaultView.location.search, CLASS_IDS);
   renderHtml(doc.getElementById('inquiry-types'), inquiryTypeRadiosHtml(INQUIRY_TYPES, query.type));
   renderHtml(form.elements.classId, classOptionsHtml(CLASSES_DATA, query.classId));
+  setupTrialDate(form);
   form.setAttribute('novalidate', '');
   form.addEventListener('submit', (event) => handleSubmit(event, doc, config));
 };

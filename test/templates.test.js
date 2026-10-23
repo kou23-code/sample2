@@ -106,16 +106,17 @@ test('教室の選択肢は7教室＋未選択で、指定IDが選択済みに�
 });
 
 test('種別ラジオボタンを生成する', () => {
-  const html = tpl.inquiryTypeRadiosHtml(INQUIRY_TYPES, 'question');
-  assert.match(html, /value="question" checked/);
-  assert.equal((html.match(/type="radio"/g) ?? []).length, 3);
+  const html = tpl.inquiryTypeRadiosHtml(INQUIRY_TYPES, 'general');
+  assert.match(html, /value="general" checked/);
+  assert.equal((html.match(/type="radio"/g) ?? []).length, 2);
 });
 
 test('送信内容の確認表示を作り、入力値はエスケープされる', () => {
-  const values = { inquiryType: 'trial', classId: 'play', name: '<b>架空</b>', email: 'a@example.com', tel: '', message: '' };
+  const values = { inquiryType: 'trial', classId: 'play', preferredDate: '2026-11-03', name: '<b>架空</b>', email: 'a@example.com', tel: '', message: '' };
   const rows = tpl.completionRows(values, CLASSES_DATA);
   assert.deepEqual(rows[1], ['希望教室', '運動あそび教室']);
-  assert.deepEqual(rows[4], ['電話番号', '未入力']);
+  assert.deepEqual(rows[2], ['希望日', '2026年11月3日']);
+  assert.deepEqual(rows[5], ['電話番号', '未入力']);
   assert.match(tpl.completionTableHtml(rows), /&lt;b&gt;架空&lt;\/b&gt;/);
 });
 
@@ -126,8 +127,9 @@ test('件数・エラー件数の案内文を作る', () => {
 });
 
 test('希望教室なしは「指定なし」', () => {
-  const rows = tpl.completionRows({ inquiryType: 'other', classId: '' }, CLASSES_DATA);
+  const rows = tpl.completionRows({ inquiryType: 'general', classId: '', preferredDate: '' }, CLASSES_DATA);
   assert.deepEqual(rows[1], ['希望教室', '指定なし']);
+  assert.ok(rows.every(([label]) => label !== '希望日'), '一般的なお問い合わせでは希望日を表示しない');
 });
 
 // ---- お知らせの添付ファイル ----

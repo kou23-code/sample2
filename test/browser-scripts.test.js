@@ -134,3 +134,22 @@ test('トップページの最新のお知らせは5件表示する', () => {
   const html = vm.runInContext('newsLinkListHtml(latestNews(NEWS_ITEMS, TOP_NEWS_COUNT), NEWS_CATEGORIES)', context);
   assert.equal((html.match(/<li class="news-item">/g) ?? []).length, 5);
 });
+
+// ---- お問い合わせフォームの希望日欄の切り替え（フォームは最小限の偽物） ----
+
+const fakeContactForm = (typeId) => ({
+  elements: { inquiryType: { value: typeId }, preferredDate: { disabled: true, required: false } },
+  field: { hidden: true },
+  querySelector() { return this.field; },
+});
+
+test('体験申込を選ぶと希望日欄を表示・必須にし、一般的なお問い合わせでは非表示・無効にする', () => {
+  const context = loadScripts('');
+  const toggle = vm.runInContext('toggleTrialDate', context);
+  const trial = fakeContactForm('trial');
+  toggle(trial);
+  assert.deepEqual([trial.field.hidden, trial.elements.preferredDate.disabled, trial.elements.preferredDate.required], [false, false, true]);
+  const general = fakeContactForm('general');
+  toggle(general);
+  assert.deepEqual([general.field.hidden, general.elements.preferredDate.disabled, general.elements.preferredDate.required], [true, true, false]);
+});
