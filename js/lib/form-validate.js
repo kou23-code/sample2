@@ -123,9 +123,27 @@ const parseContactQuery = (search, classIds) => {
   return Object.freeze({ type: typeId || (classId ? 'trial' : ''), classId });
 };
 
+// ---- GAS への送信（このファイルは GAS にも貼り付け、受け取る側の検証とリクエストの判定に共用する） ----
+
+// お知らせ管理（action: login/list/create）と区別するための操作名
+const CONTACT_ACTION = 'contact';
+const isHttpUrl = (url) => /^https?:\/\/\S+$/.test(String(url ?? '').trim());
+
+// 送信先：formEndpoint があればそれを、無ければお知らせと同じ GAS の Webアプリ（newsEndpoint）を使う（どちらも無ければ空＝デモ）
+const inquiryEndpoint = (config) =>
+  [config?.formEndpoint, config?.newsEndpoint].find(isHttpUrl)?.trim() ?? '';
+
+// 送信する本文（text/plain の JSON。GAS は CORS の事前確認に応じないため Content-Type を付けない）
+// classLabel は希望教室の表示名（教室の一覧はサイト側にしかないため、通知メール・シート用に添える）
+const inquiryRequestBody = (values, classLabel) => JSON.stringify({ action: CONTACT_ACTION, data: { ...values, classLabel } });
+
+const isContactRequest = (request) => request?.action === CONTACT_ACTION;
+const isInquiryAccepted = (json) => json?.ok === true;
+
 if (typeof module === 'object' && module.exports) {
   module.exports = {
     INQUIRY_TYPES, GRADES, FORM_FIELDS, TYPE_ONLY_FIELDS, isBlank, isEmail, isTel, isAge, isTrialInquiry, isIsoDate,
     fieldsForType, earliestTrialDate, normalizeFormValues, validateForm, inquiryTypeLabel, gradeLabel, parseContactQuery,
+    CONTACT_ACTION, inquiryEndpoint, inquiryRequestBody, isContactRequest, isInquiryAccepted,
   };
 }

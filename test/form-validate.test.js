@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
   INQUIRY_TYPES, GRADES, validateForm, normalizeFormValues, isEmail, isTel, isAge, inquiryTypeLabel, gradeLabel,
   parseContactQuery, isTrialInquiry, isIsoDate, earliestTrialDate, fieldsForType,
+  inquiryEndpoint, inquiryRequestBody, isContactRequest, isInquiryAccepted,
 } = require('../js/lib/form-validate.js');
 
 const CLASS_IDS = ['track-kids', 'table-tennis'];
@@ -174,4 +175,29 @@ test('URLクエリの不正な値は無視する', () => {
 test('種別の表示名を引ける', () => {
   assert.equal(inquiryTypeLabel('trial'), '体験申込');
   assert.equal(inquiryTypeLabel('x'), '');
+});
+
+// ---- GAS への送信 ----
+
+test('送信先は formEndpoint を優先し、無ければお知らせと同じ GAS（newsEndpoint）、どちらも無ければ空（デモ）', () => {
+  const gasUrl = 'https://script.google.com/macros/s/x/exec';
+  assert.equal(inquiryEndpoint({ formEndpoint: 'https://example.com/form', newsEndpoint: gasUrl }), 'https://example.com/form');
+  assert.equal(inquiryEndpoint({ formEndpoint: '', newsEndpoint: ` ${gasUrl} ` }), gasUrl);
+  assert.equal(inquiryEndpoint({ formEndpoint: '', newsEndpoint: 'YOUR_GAS_WEB_APP_URL' }), '');
+  assert.equal(inquiryEndpoint(undefined), '');
+});
+
+test('送信本文は action: contact と入力値・希望教室の表示名の JSON', () => {
+  assert.deepEqual(JSON.parse(inquiryRequestBody({ name: '架空' }, '運動あそび教室')),
+    { action: 'contact', data: { name: '架空', classLabel: '運動あそび教室' } });
+  assert.equal(isContactRequest(JSON.parse(inquiryRequestBody({}, ''))), true);
+  assert.equal(isContactRequest({ action: 'login' }), false);
+  assert.equal(isContactRequest(null), false);
+});
+
+test('GAS の応答は ok: true のときだけ受付成功', () => {
+  assert.equal(isInquiryAccepted({ ok: true }), true);
+  assert.equal(isInquiryAccepted({ ok: false, errors: ['x'] }), false);
+  assert.equal(isInquiryAccepted({ error: 'x' }), false);
+  assert.equal(isInquiryAccepted(null), false);
 });
