@@ -135,21 +135,33 @@ test('トップページの最新のお知らせは5件表示する', () => {
   assert.equal((html.match(/<li class="news-item">/g) ?? []).length, 5);
 });
 
-// ---- お問い合わせフォームの希望日欄の切り替え（フォームは最小限の偽物） ----
+// ---- お問い合わせフォームの項目の切り替え（フォームは最小限の偽物） ----
 
-const fakeContactForm = (typeId) => ({
-  elements: { inquiryType: { value: typeId }, preferredDate: { disabled: true, required: false } },
-  field: { hidden: true },
-  querySelector() { return this.field; },
+const fakeControl = () => ({ required: false, disabled: true });
+const fakeGroup = (typeId, count) => {
+  const controls = Array.from({ length: count }, fakeControl);
+  return { dataset: { inquiryOnly: typeId }, hidden: true, controls, querySelectorAll: () => controls };
+};
+const fakeContactForm = (typeId) => {
+  const groups = [fakeGroup('trial', 7), fakeGroup('general', 1)];
+  return { groups, elements: { inquiryType: { value: typeId } }, querySelectorAll: () => groups };
+};
+// [表示中か, 全欄が必須か, 全欄が無効か] を種別ごとに返す
+const groupStates = (form) => form.groups.map((group) => [group.dataset.inquiryOnly, !group.hidden,
+  group.controls.every((control) => control.required), group.controls.every((control) => control.disabled)]);
+
+test('種別の切り替えに合わせて、専用項目の枠の表示と各欄の required・disabled が連動する', () => {
+  const toggle = vm.runInContext('toggleInquiryFields', loadScripts(''));
+  const form = fakeContactForm('trial');
+  toggle(form);
+  assert.deepEqual(groupStates(form), [['trial', true, true, false], ['general', false, false, true]]);
+  form.elements.inquiryType.value = 'general';
+  toggle(form);
+  assert.deepEqual(groupStates(form), [['trial', false, false, true], ['general', true, true, false]]);
 });
 
-test('体験申込を選ぶと希望日欄を表示・必須にし、一般的なお問い合わせでは非表示・無効にする', () => {
-  const context = loadScripts('');
-  const toggle = vm.runInContext('toggleTrialDate', context);
-  const trial = fakeContactForm('trial');
-  toggle(trial);
-  assert.deepEqual([trial.field.hidden, trial.elements.preferredDate.disabled, trial.elements.preferredDate.required], [false, false, true]);
-  const general = fakeContactForm('general');
-  toggle(general);
-  assert.deepEqual([general.field.hidden, general.elements.preferredDate.disabled, general.elements.preferredDate.required], [true, true, false]);
+test('種別が未選択なら、どちらの専用項目も非表示・必須なし', () => {
+  const form = fakeContactForm('');
+  vm.runInContext('toggleInquiryFields', loadScripts(''))(form);
+  assert.deepEqual(groupStates(form), [['trial', false, false, true], ['general', false, false, true]]);
 });

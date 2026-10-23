@@ -70,46 +70,86 @@
             <p class="field-error" id="error-inquiryType" data-error-for="inquiryType"></p>
           </fieldset>
 
-          <div class="form-field">
-            <label for="classId">希望する教室<span class="required">体験申込は必須</span></label>
-            <select id="classId" name="classId" data-field="classId" aria-describedby="hint-classId error-classId">
-              <option value="">選択してください</option>
-            </select>
-            <p class="form-hint" id="hint-classId">一般的なお問い合わせの場合、教室が決まっていなければ「選択してください」のままで大丈夫です。</p>
-            <p class="field-error" id="error-classId" data-error-for="classId"></p>
+          <!-- 体験申込のときだけ表示・必須（app.js の toggleInquiryFields が切り替える） -->
+          <div id="trial-fields" class="form-group" data-inquiry-only="trial" hidden>
+            <div class="form-field">
+              <label for="classId">希望する教室<span class="required">必須</span></label>
+              <select id="classId" name="classId" data-field="classId" aria-describedby="error-classId" disabled>
+                <option value="">選択してください</option>
+              </select>
+              <p class="field-error" id="error-classId" data-error-for="classId"></p>
+            </div>
+
+            <div class="form-field">
+              <label for="preferredDate">体験の希望日<span class="required">必須</span></label>
+              <input type="date" id="preferredDate" name="preferredDate" data-field="preferredDate" aria-describedby="hint-preferredDate error-preferredDate" disabled>
+              <p class="form-hint" id="hint-preferredDate">明後日以降の日付を選択できます。教室の実施曜日は教室案内でご確認ください。</p>
+              <p class="field-error" id="error-preferredDate" data-error-for="preferredDate"></p>
+            </div>
+
+            <div class="form-field">
+              <label for="guardianName">保護者名<span class="required">必須</span></label>
+              <input type="text" id="guardianName" name="guardianName" autocomplete="name" maxlength="50" data-field="guardianName" aria-describedby="hint-guardianName error-guardianName" disabled>
+              <p class="form-hint" id="hint-guardianName">参加される方が成人の場合は、ご本人のお名前をご記入ください。</p>
+              <p class="field-error" id="error-guardianName" data-error-for="guardianName"></p>
+            </div>
+
+            <div class="form-field">
+              <label for="participantName">参加者のお名前<span class="required">必須</span></label>
+              <input type="text" id="participantName" name="participantName" maxlength="50" data-field="participantName" aria-describedby="error-participantName" disabled>
+              <p class="field-error" id="error-participantName" data-error-for="participantName"></p>
+            </div>
+
+            <div class="form-field">
+              <label for="schoolName">学校名<span class="required">必須</span></label>
+              <input type="text" id="schoolName" name="schoolName" maxlength="50" data-field="schoolName" aria-describedby="hint-schoolName error-schoolName" disabled>
+              <p class="form-hint" id="hint-schoolName">学校・園に通っていない方は「なし」とご記入ください。</p>
+              <p class="field-error" id="error-schoolName" data-error-for="schoolName"></p>
+            </div>
+
+            <div class="form-field">
+              <label for="grade">学年<span class="required">必須</span></label>
+              <select id="grade" name="grade" data-field="grade" aria-describedby="error-grade" disabled>
+                <option value="">選択してください</option>
+              </select>
+              <p class="field-error" id="error-grade" data-error-for="grade"></p>
+            </div>
+
+            <div class="form-field">
+              <label for="age">年齢<span class="required">必須</span></label>
+              <input type="number" id="age" name="age" min="0" max="120" step="1" inputmode="numeric" class="form-input-short" data-field="age" aria-describedby="error-age" disabled>
+              <p class="field-error" id="error-age" data-error-for="age"></p>
+            </div>
           </div>
 
-          <div class="form-field" data-trial-only hidden>
-            <label for="preferredDate">体験の希望日<span class="required">必須</span></label>
-            <input type="date" id="preferredDate" name="preferredDate" data-field="preferredDate" aria-describedby="hint-preferredDate error-preferredDate" disabled>
-            <p class="form-hint" id="hint-preferredDate">明後日以降の日付を選択できます。教室の実施曜日は教室案内でご確認ください。</p>
-            <p class="field-error" id="error-preferredDate" data-error-for="preferredDate"></p>
+          <!-- 一般的なお問い合わせのときだけ表示・必須 -->
+          <div id="general-fields" class="form-group" data-inquiry-only="general" hidden>
+            <div class="form-field">
+              <label for="name">お名前（質問者名）<span class="required">必須</span></label>
+              <input type="text" id="name" name="name" autocomplete="name" maxlength="50" data-field="name" aria-describedby="error-name" disabled>
+              <p class="field-error" id="error-name" data-error-for="name"></p>
+            </div>
           </div>
 
-          <div class="form-field">
-            <label for="name">お名前<span class="required">必須</span></label>
-            <input type="text" id="name" name="name" autocomplete="name" maxlength="50" data-field="name" aria-describedby="error-name">
-            <p class="field-error" id="error-name" data-error-for="name"></p>
-          </div>
-
+          <!-- ここから下は両方の種別で表示・必須 -->
           <div class="form-field">
             <label for="email">メールアドレス<span class="required">必須</span></label>
-            <input type="email" id="email" name="email" autocomplete="email" inputmode="email" data-field="email" aria-describedby="hint-email error-email">
+            <input type="email" id="email" name="email" autocomplete="email" inputmode="email" data-field="email" aria-describedby="hint-email error-email" required>
             <p class="form-hint" id="hint-email">例：taro@example.com</p>
             <p class="field-error" id="error-email" data-error-for="email"></p>
           </div>
 
           <div class="form-field">
-            <label for="tel">電話番号<span class="optional">任意</span></label>
-            <input type="tel" id="tel" name="tel" autocomplete="tel" inputmode="tel" data-field="tel" aria-describedby="hint-tel error-tel">
-            <p class="form-hint" id="hint-tel">お電話での連絡をご希望の方はご入力ください（ハイフンあり・なしどちらでも可）。</p>
+            <label for="tel">電話番号<span class="required">必須</span></label>
+            <input type="tel" id="tel" name="tel" autocomplete="tel" inputmode="tel" data-field="tel" aria-describedby="hint-tel error-tel" required>
+            <p class="form-hint" id="hint-tel">日中につながりやすい番号をご入力ください（ハイフンあり・なしどちらでも可）。</p>
             <p class="field-error" id="error-tel" data-error-for="tel"></p>
           </div>
 
           <div class="form-field">
-            <label for="message">お問い合わせ内容<span class="required">一般的なお問い合わせは必須</span></label>
-            <textarea id="message" name="message" maxlength="1000" data-field="message" aria-describedby="hint-message error-message"></textarea>
-            <p class="form-hint" id="hint-message">体験申込の場合は、参加される方の学年・年齢などをご記入ください（任意・1000文字以内）。</p>
+            <label for="message">お問い合わせ内容<span class="required">必須</span></label>
+            <textarea id="message" name="message" maxlength="1000" data-field="message" aria-describedby="hint-message error-message" required></textarea>
+            <p class="form-hint" id="hint-message">ご質問・ご要望などをご記入ください（1000文字以内）。</p>
             <p class="field-error" id="error-message" data-error-for="message"></p>
           </div>
 
@@ -120,7 +160,7 @@
 
           <fieldset class="form-field" data-field="agree" aria-describedby="error-agree">
             <legend class="visually-hidden">同意の確認</legend>
-            <label class="choice"><input type="checkbox" name="agree"><span>個人情報の取り扱いに同意する<span class="required">必須</span></span></label>
+            <label class="choice"><input type="checkbox" name="agree" required><span>個人情報の取り扱いに同意する<span class="required">必須</span></span></label>
             <p class="field-error" id="error-agree" data-error-for="agree"></p>
           </fieldset>
 
