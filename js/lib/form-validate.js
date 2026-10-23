@@ -44,8 +44,8 @@ const fieldsForType = (typeId) =>
   FORM_FIELDS.filter((field) => (TYPE_ONLY_FIELDS[field] ?? typeId) === typeId);
 
 // Date を端末の現地時刻の YYYY-MM-DD にする
-const pad2 = (number) => String(number).padStart(2, '0');
-const toIsoDate = (date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+const padTwoDigits = (number) => String(number).padStart(2, '0');
+const toIsoDate = (date) => `${date.getFullYear()}-${padTwoDigits(date.getMonth() + 1)}-${padTwoDigits(date.getDate())}`;
 const isIsoDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && toIsoDate(new Date(`${value}T00:00:00`)) === value;
 
 // 体験の希望日として選べる最初の日（今日を渡すと明後日の YYYY-MM-DD を返す。引数は変更しない）
