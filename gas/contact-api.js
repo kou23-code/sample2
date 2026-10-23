@@ -81,6 +81,12 @@ const saveContact = (data) => {
   return { ok: true };
 };
 
+// メール送信の権限（OAuth スコープ）の承認用。GASエディタで一度だけ手動実行し、承認画面で許可する
+// （Webアプリからは呼ばない。1日に送れる残り通数を読むだけで、メールは送らない）
+function authMail() {
+  MailApp.getRemainingDailyQuota();
+}
+
 // 問い合わせフォームからの送信（パスワード不要）。誤りがあればシートにもメールにも出さずに返す
 const handleContactRequest = (data) => {
   if (contactPostCount() >= CONTACT_RATE_MAX) return { ok: false, errors: ['送信が集中しています。お手数ですがお電話でお問い合わせください'] };
