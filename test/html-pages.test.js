@@ -92,10 +92,29 @@ test('admin.html のフォームは日付・カテゴリ・タイトル・本文
   assert.match(html, /type="file"[^>]*accept="application\/pdf,image\/jpeg,image\/png,image\/gif,image\/webp"/);
 });
 
-test('contact.html：電話への誘導の注意書きと、体験申込用の希望日欄（初期は非表示・無効）を持つ', () => {
+test('contact.html：フォームより上に、電話への誘導の注意書きを持つ', () => {
   const html = readPage('contact.html');
   assert.match(html, /class="urgent-notice">※前日・当日のご予約や、お急ぎのご連絡は、必ずお電話にてお願いいたします。</);
   assert.ok(html.indexOf('urgent-notice') < html.indexOf('<form id="contact-form"'), '注意書きはフォームより上');
-  assert.match(html, /<div class="form-field" data-trial-only hidden>/);
-  assert.match(html, /<input type="date" id="preferredDate" name="preferredDate"[^>]*disabled>/);
+});
+
+// 種別専用の枠の中身（開始タグから次の枠・共通項目の手前まで）
+const contactSection = (html, start, end) => html.slice(html.indexOf(start), html.indexOf(end));
+
+test('contact.html：種別専用の項目は対応する枠に入り、初期は非表示・無効（検証ロジックの対象項目と一致）', () => {
+  const html = readPage('contact.html');
+  const { TYPE_ONLY_FIELDS } = require('../js/lib/form-validate.js');
+  const sections = {
+    trial: contactSection(html, '<div id="trial-fields" class="form-group" data-inquiry-only="trial" hidden>', 'id="general-fields"'),
+    general: contactSection(html, '<div id="general-fields" class="form-group" data-inquiry-only="general" hidden>', 'id="email"'),
+  };
+  Object.entries(TYPE_ONLY_FIELDS).forEach(([field, typeId]) => {
+    assert.match(sections[typeId], new RegExp(`name="${field}"[^>]*disabled>`), `${field} は ${typeId} の枠にあり無効で始まる`);
+  });
+  assert.match(sections.trial, /<input type="date" id="preferredDate"/);
+});
+
+test('contact.html：共通項目（メール・電話・内容・同意）は常に required', () => {
+  const html = readPage('contact.html');
+  ['email', 'tel', 'message', 'agree'].forEach((field) => assert.match(html, new RegExp(`name="${field}"[^>]*required`), field));
 });

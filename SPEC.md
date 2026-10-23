@@ -302,22 +302,32 @@
 - フォームの直前に赤字・赤枠の注意書き（`.urgent-notice`）「※前日・当日のご予約や、お急ぎのご連絡は、必ずお電話にてお願いいたします。」を表示する。
 - フォーム冒頭の種別ラジオボタンは「体験申込」「一般的なお問い合わせ」の2択。
 
-| 項目 | name | 必須 | 検証ルール |
-| --- | --- | --- | --- |
-| 種別 | `inquiryType` | 必須 | `trial`（体験申込）／`general`（一般的なお問い合わせ）のいずれか |
-| 希望教室 | `classId` | 体験申込のとき必須 | 7教室のIDのいずれか（一般的なお問い合わせは未選択可） |
-| 体験の希望日 | `preferredDate` | 体験申込のとき必須 | `YYYY-MM-DD` の実在する日付で、明後日以降（今日・明日は不可） |
-| お名前 | `name` | 必須 | 50文字以内 |
-| メールアドレス | `email` | 必須 | `xxx@xxx.xx` 形式 |
-| 電話番号 | `tel` | 任意 | 数字・ハイフン等のみで数字10〜11桁 |
-| 内容 | `message` | 一般的なお問い合わせのとき必須 | 1000文字以内 |
-| 同意 | `agree` | 必須 | チェックあり |
+種別ごとに表示・必須とする項目（画面の並び順。「体験」「一般」列の ● が表示・必須、－ は非表示・送信対象外）：
 
-- 体験の希望日欄（`<input type="date">`、`data-trial-only` の枠）：
-  - 初期状態は非表示・`disabled`。種別が「体験申込」のときだけ `app.js` の `toggleTrialDate` が表示し、`disabled` を外して `required` を付ける。「一般的なお問い合わせ」に切り替えると再び非表示・`disabled` にする（`disabled` の欄は送信されない）。
-  - `min` 属性に `earliestTrialDate(今日)`（端末の現地時刻で今日＋`TRIAL_MIN_DAYS_AHEAD`＝2日）を設定し、カレンダーで今日・明日を選べないようにする。送信時も同じ下限で再検証する（`validateForm(raw, classIds, minDate)`）。
-  - 完了画面の入力内容一覧には、体験申込のときだけ「希望日」（例：2026年11月3日）を表示する。
-- 入力値は前後の空白を除去してから検証する（`validateForm` は `{ valid, values, errors }` を返す）。
+| 項目 | name | 体験 | 一般 | 検証ルール |
+| --- | --- | --- | --- | --- |
+| 種別 | `inquiryType` | ● | ● | `trial`（体験申込）／`general`（一般的なお問い合わせ）のいずれか |
+| 希望する教室 | `classId` | ● | － | 7教室のIDのいずれか |
+| 体験の希望日 | `preferredDate` | ● | － | `YYYY-MM-DD` の実在する日付で、明後日以降（今日・明日は不可） |
+| 保護者名 | `guardianName` | ● | － | 50文字以内（参加者が成人の場合は本人名） |
+| 参加者のお名前 | `participantName` | ● | － | 50文字以内 |
+| 学校名 | `schoolName` | ● | － | 50文字以内（通っていない場合は「なし」と記入） |
+| 学年 | `grade` | ● | － | `GRADES` のいずれか（未就学／小学1〜6年／中学1〜3年／高校1〜3年／その他（大学生・社会人など）） |
+| 年齢 | `age` | ● | － | 0〜120の整数（`<input type="number">`） |
+| お名前（質問者名） | `name` | － | ● | 50文字以内 |
+| メールアドレス | `email` | ● | ● | `xxx@xxx.xx` 形式 |
+| 電話番号 | `tel` | ● | ● | 数字・ハイフン等のみで数字10〜11桁 |
+| お問い合わせ内容 | `message` | ● | ● | 1000文字以内 |
+| 同意 | `agree` | ● | ● | チェックあり |
+
+- 種別専用の項目は `form-validate.js` の `TYPE_ONLY_FIELDS`（項目名→種別ID）で定義し、`fieldsForType(種別ID)` がその種別で入力を求める項目を画面の並び順で返す。種別が未選択・不正なら共通項目（メール・電話・内容・同意）だけ。
+- 表示の切り替え（`app.js` の `toggleInquiryFields`）：
+  - HTML では体験専用の項目を `<div id="trial-fields" class="form-group" data-inquiry-only="trial" hidden>`、一般専用の項目を `<div id="general-fields" class="form-group" data-inquiry-only="general" hidden>` にまとめ、中の入力欄は初期状態で `disabled`・`required` なし。共通項目は HTML で常に `required`。
+  - 種別ラジオボタンの `change` ごとに、選ばれた種別の枠は表示して中の `input`・`select`・`textarea` に `required` を付けて `disabled` を外し、それ以外の枠は非表示にして `required` を外し `disabled` にする（`disabled` の欄は送信されない）。ページ表示時（URLクエリで種別を初期選択した場合を含む）にも1回実行する。
+  - 画面の必須チェックはブラウザ標準の検証ではなく `validateForm` で行う（フォームに `novalidate` を付ける）。`required` 属性は支援技術向けの印を兼ねる。
+- 体験の希望日欄：`min` 属性に `earliestTrialDate(今日)`（端末の現地時刻で今日＋`TRIAL_MIN_DAYS_AHEAD`＝2日）を設定し、カレンダーで今日・明日を選べないようにする。送信時も同じ下限で再検証する（`validateForm(raw, classIds, minDate)`）。
+- 完了画面の入力内容一覧は、選ばれた種別の項目だけを並べる（希望日は「2026年11月3日」、学年は表示名、年齢は「8歳」の形式）。
+- 入力値は前後の空白を除去してから検証し、選ばれた種別の項目だけを検証する（`validateForm` は `{ valid, values, errors }` を返す）。
 - エラー時：項目ごとに赤字のメッセージ、`aria-invalid="true"`、フォーム上部にエラー件数（`role="alert"`）を表示し、最初のエラー項目へフォーカスする。
 - 送信：
   - `formEndpoint` が空（既定）の場合：どこにも送信せず、完了画面に「デモ設定のため送信・保存されていません」と表示する。

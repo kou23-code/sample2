@@ -191,19 +191,25 @@ const handleSubmit = (event, doc, config) => {
   return result.valid && submitInquiry(doc, event.target, config, result.values);
 };
 
-// 体験申込のときだけ希望日欄を表示・必須にし、それ以外は非表示・無効化する（無効の欄は送信されない）
-const toggleTrialDate = (form) => {
-  const isTrial = isTrialInquiry(form.elements.inquiryType.value);
-  form.querySelector('[data-trial-only]').hidden = !isTrial;
-  form.elements.preferredDate.disabled = !isTrial;
-  form.elements.preferredDate.required = isTrial;
+// 種別専用のコンテナ（data-inquiry-only="種別ID"）の表示と、中の入力欄の required・disabled を連動させる
+// 選ばれていない種別の欄は非表示・必須なし・無効（無効の欄は送信されない）
+const setGroupActive = (group, active) => {
+  group.hidden = !active;
+  group.querySelectorAll('input, select, textarea').forEach((control) => {
+    control.required = active;
+    control.disabled = !active;
+  });
 };
 
-// 希望日は明後日以降だけ選べるようにし、種別の変更に合わせて表示を切り替える
-const setupTrialDate = (form) => {
+const toggleInquiryFields = (form) =>
+  form.querySelectorAll('[data-inquiry-only]').forEach((group) =>
+    setGroupActive(group, group.dataset.inquiryOnly === form.elements.inquiryType.value));
+
+// 希望日は明後日以降だけ選べるようにし、種別の変更に合わせて項目を切り替える
+const setupInquiryFields = (form) => {
   form.elements.preferredDate.min = earliestTrialDate(new Date());
-  form.addEventListener('change', (event) => event.target.name === 'inquiryType' && toggleTrialDate(form));
-  toggleTrialDate(form);
+  form.addEventListener('change', (event) => event.target.name === 'inquiryType' && toggleInquiryFields(form));
+  toggleInquiryFields(form);
 };
 
 const initContactPage = (doc, config) => {
@@ -211,7 +217,8 @@ const initContactPage = (doc, config) => {
   const query = parseContactQuery(doc.defaultView.location.search, CLASS_IDS);
   renderHtml(doc.getElementById('inquiry-types'), inquiryTypeRadiosHtml(INQUIRY_TYPES, query.type));
   renderHtml(form.elements.classId, classOptionsHtml(CLASSES_DATA, query.classId));
-  setupTrialDate(form);
+  renderHtml(form.elements.grade, gradeOptionsHtml(GRADES));
+  setupInquiryFields(form);
   form.setAttribute('novalidate', '');
   form.addEventListener('submit', (event) => handleSubmit(event, doc, config));
 };

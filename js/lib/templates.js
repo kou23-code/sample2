@@ -4,7 +4,7 @@
 const tplDeps = typeof module === 'object' && module.exports
   ? { ...require('./news-logic.js'), ...require('./class-logic.js'), ...require('./form-validate.js') }
   : {
-    formatDateJa, categoryLabel, newsAttachment, hasNewsOrder, newsAnchorId, classDisplayName, ageLabels, inquiryTypeLabel, isTrialInquiry,
+    formatDateJa, categoryLabel, newsAttachment, hasNewsOrder, newsAnchorId, classDisplayName, ageLabels, inquiryTypeLabel, gradeLabel, fieldsForType,
     classMainRows, classFeeRows, sessionRows, sessionHeading, classTargetSummary, hasMultipleSessions,
     feeSystemRows, insuranceTitle, insuranceRows, insuranceRangeText, classFeeRangeText,
   };
@@ -183,14 +183,32 @@ const inquiryTypeRadiosHtml = (types, selectedId) =>
     <label class="choice"><input type="radio" name="inquiryType" value="${escapeHtml(type.id)}"${type.id === selectedId ? ' checked' : ''}>
     <span>${escapeHtml(type.label)}</span></label>`).join('');
 
-// 送信内容の確認用 [項目名, 値] の配列を作る
-const completionRows = (values, classes) => [
-  ['種別', tplDeps.inquiryTypeLabel(values.inquiryType)],
-  ['希望教室', tplDeps.classDisplayName(classes.find((item) => item.id === values.classId) ?? { name: '指定なし' })],
-  ...(tplDeps.isTrialInquiry(values.inquiryType) ? [['希望日', tplDeps.formatDateJa(values.preferredDate)]] : []),
-  ['お名前', values.name], ['メールアドレス', values.email],
-  ['電話番号', values.tel || '未入力'], ['内容', values.message || '未入力'],
-];
+const gradeOptionsHtml = (grades) =>
+  ['<option value="">選択してください</option>', ...grades.map((grade) =>
+    `<option value="${escapeHtml(grade.id)}">${escapeHtml(grade.label)}</option>`)].join('');
+
+// 送信内容の確認一覧に出す項目名（同意チェックは出さない）
+const COMPLETION_LABELS = Object.freeze({
+  inquiryType: '種別', classId: '希望教室', preferredDate: '希望日', guardianName: '保護者名',
+  participantName: '参加者のお名前', schoolName: '学校名', grade: '学年', age: '年齢',
+  name: 'お名前', email: 'メールアドレス', tel: '電話番号', message: '内容',
+});
+
+// 入力値をそのまま出さない項目の表示形式
+const completionFormatters = (classes) => ({
+  inquiryType: tplDeps.inquiryTypeLabel,
+  classId: (id) => tplDeps.classDisplayName(classes.find((item) => item.id === id) ?? { name: '指定なし' }),
+  preferredDate: tplDeps.formatDateJa,
+  grade: tplDeps.gradeLabel,
+  age: (age) => `${age}歳`,
+});
+
+// 送信内容の確認用 [項目名, 値] の配列を作る（選ばれた種別の項目だけ）
+const completionRows = (values, classes) => {
+  const formatters = completionFormatters(classes);
+  return tplDeps.fieldsForType(values.inquiryType).filter((field) => COMPLETION_LABELS[field])
+    .map((field) => [COMPLETION_LABELS[field], (formatters[field] ?? String)(values[field])]);
+};
 
 const completionTableHtml = (rows) =>
   `<dl class="summary-list">${rows.map(([label, value]) =>
@@ -206,7 +224,7 @@ const errorSummaryText = (count) =>
 if (typeof module === 'object' && module.exports) {
   module.exports = {
     escapeHtml, newsListHtml, newsLinkListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml, feeSystemHtml, insuranceHtml, feeInfoHtml,
-    classOptionsHtml, inquiryTypeRadiosHtml, completionRows, completionTableHtml,
+    classOptionsHtml, inquiryTypeRadiosHtml, gradeOptionsHtml, completionRows, completionTableHtml,
     resultCountText, errorSummaryText,
   };
 }
