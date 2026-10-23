@@ -174,6 +174,62 @@ test('メールが送れなくても（送信上限など）、シートに保�
   assert.equal(contactRows(context).length, 1);
 });
 
+// ---- 送信者への自動返信メール ----
+
+const replyMailOf = (context) => context.record.mails.find((mail) => mail.subject.startsWith('【自動送信】'));
+
+test('受付時に、通知メールに続けて送信者のメールアドレス宛てに自動返信を送る', () => {
+  const context = loadGas(new Map([['CONTACT_NOTIFY_EMAIL', 'staff@example.com']]));
+  postContact(context, trialValues, '運動あそび教室');
+  assert.deepEqual(context.record.mails.map((mail) => mail.to), ['staff@example.com', 'hanako@example.com']);
+  const reply = replyMailOf(context);
+  assert.deepEqual([reply.subject, reply.replyTo, reply.name],
+    ['【自動送信】お問い合わせ・体験申込を受け付けました', undefined, 'ホームページ お問い合わせフォーム']);
+});
+
+test('自動返信の本文は、宛名・挨拶文のあとに入力内容の控えと受付日時を記載する', () => {
+  const context = loadGas();
+  postContact(context, trialValues, '運動あそび教室');
+  const lines = replyMailOf(context).body.split('\n');
+  assert.deepEqual(lines.slice(0, 4), [
+    '架空 花子 様', '', 'このたびはお問い合わせいただき、誠にありがとうございます。',
+    '以下の内容でお問い合わせを受け付けました。担当者より順次ご連絡いたします。',
+  ]);
+  const body = lines.join('\n');
+  ['【お問い合わせ内容の控え】', '■種別\n体験申込', '■希望教室\n運動あそび教室', `■希望日\n${FAR_DATE}`, '■参加者のお名前\n架空 太郎',
+    '■学年\n小学3年', '■年齢\n8歳', '■電話番号\n000-000-0000', '■お問い合わせ内容\nよろしくお願いします', `受付日時：${RECEIVED_AT}`,
+    '※前日・当日のご予約や、お急ぎのご連絡は、必ずお電話にてお願いいたします。'].forEach((text) => assert.ok(body.includes(text), text));
+  assert.ok(body.indexOf('このたびは') < body.indexOf('【お問い合わせ内容の控え】'), '挨拶文は控えより上');
+});
+
+test('一般的なお問い合わせの自動返信は、お名前で宛名を書き、体験の項目を含めない', () => {
+  const context = loadGas();
+  postContact(context, generalValues);
+  const reply = replyMailOf(context);
+  assert.equal(reply.to, 'ichiro@example.com');
+  assert.ok(reply.body.startsWith('架空 一郎 様\n'));
+  assert.deepEqual(reply.body.match(/^■.+$/gm), ['■種別', '■お名前', '■メールアドレス', '■電話番号', '■お問い合わせ内容']);
+});
+
+test('自動返信の署名はスクリプト プロパティ CONTACT_REPLY_SIGNATURE から付け（\\n は改行）、未登録なら付けない', () => {
+  const signed = loadGas(new Map([['CONTACT_REPLY_SIGNATURE', '架空クラブ\\n電話 000-000-0000']]));
+  postContact(signed, generalValues);
+  assert.ok(replyMailOf(signed).body.endsWith('\n\n架空クラブ\n電話 000-000-0000'));
+  const unsigned = loadGas(new Map());
+  postContact(unsigned, generalValues);
+  assert.ok(replyMailOf(unsigned).body.endsWith('お手数ですがこのメールを破棄してください。'));
+});
+
+test('通知メールが送れなくても自動返信は送り、自動返信が送れなくても通知メールは送る', () => {
+  const failFor = (to) => `MailApp.sendEmail = (mail) => { if (mail.to === '${to}') throw new Error('送信失敗'); record.mails.push(mail); };`;
+  const notifyFails = loadGas(new Map([['CONTACT_NOTIFY_EMAIL', 'staff@example.com']]));
+  vm.runInContext(failFor('staff@example.com'), notifyFails);
+  assert.deepEqual([postContact(notifyFails, generalValues).ok, notifyFails.record.mails.map((m) => m.to)], [true, ['ichiro@example.com']]);
+  const replyFails = loadGas(new Map([['CONTACT_NOTIFY_EMAIL', 'staff@example.com']]));
+  vm.runInContext(failFor('ichiro@example.com'), replyFails);
+  assert.deepEqual([postContact(replyFails, generalValues).ok, replyFails.record.mails.map((m) => m.to)], [true, ['staff@example.com']]);
+});
+
 test('10分間に20件を超える送信は受け付けない（メールの上限を使い切らないため）', () => {
   const context = loadGas();
   Array.from({ length: 20 }).forEach(() => postContact(context, generalValues));

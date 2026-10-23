@@ -53,11 +53,44 @@ const contactPersonName = (values) => (isTrialInquiry(values.inquiryType) ? valu
 const contactMailSubject = (values) =>
   `【ホームページ】${inquiryTypeLabel(values.inquiryType)}：${contactPersonName(values)} 様`;
 
+// メール本文の入力内容の一覧（「■項目名」の次の行に値）
+const contactRowsText = (values, classLabel) =>
+  contactDisplayRows(values, classLabel).map(([label, text]) => `■${label}\n${text}`);
+
 // 通知メールの本文（全項目と、返信先・保存先の案内）
 const contactMailBody = (values, classLabel, receivedAt) => [
   `ホームページのフォームから${inquiryTypeLabel(values.inquiryType)}が届きました。`, '',
-  ...contactDisplayRows(values, classLabel).map(([label, text]) => `■${label}\n${text}`), '',
+  ...contactRowsText(values, classLabel), '',
   `受付日時：${receivedAt}`,
   `※このメールに返信すると、送信者（${values.email}）宛てになります。`,
   '※内容はスプレッドシートの「お問い合わせ」シートにも保存されています。',
+].join('\n');
+
+// ---- 送信者への自動返信メール ----
+
+const CONTACT_REPLY_SUBJECT = '【自動送信】お問い合わせ・体験申込を受け付けました';
+const CONTACT_REPLY_DIVIDER = '――――――――――――――――――――';
+
+// 自動返信の冒頭（宛名と挨拶）
+const contactReplyGreeting = (values) => [
+  `${contactPersonName(values)} 様`, '',
+  'このたびはお問い合わせいただき、誠にありがとうございます。',
+  '以下の内容でお問い合わせを受け付けました。担当者より順次ご連絡いたします。',
+];
+
+// 自動返信の末尾（注意書きと、スクリプト プロパティで設定した署名。署名が空なら付けない）
+const contactReplyFooter = (signature) => [
+  '※このメールは送信内容の控えとして自動でお送りしています。',
+  '※前日・当日のご予約や、お急ぎのご連絡は、必ずお電話にてお願いいたします。',
+  '※お心当たりのない場合は、お手数ですがこのメールを破棄してください。',
+  ...(signature ? ['', signature] : []),
+];
+
+// 自動返信の本文（挨拶 → 入力内容の控え → 受付日時 → 注意書き・署名）
+const contactReplyBody = (values, classLabel, receivedAt, signature) => [
+  ...contactReplyGreeting(values), '',
+  '【お問い合わせ内容の控え】', CONTACT_REPLY_DIVIDER,
+  ...contactRowsText(values, classLabel),
+  CONTACT_REPLY_DIVIDER, `受付日時：${receivedAt}`, '',
+  ...contactReplyFooter(signature),
 ].join('\n');
