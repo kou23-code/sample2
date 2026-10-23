@@ -6,7 +6,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const ROOT = path.join(__dirname, '..');
-const GAS_FILES = ['gas/news-sheet.js', 'gas/news-admin.js', 'gas/news-api.js'];
+// GAS に貼り付けるファイル一式（js/lib/form-validate.js は「contact-validate」としてサイトと共用する）
+const GAS_FILES = [
+  'js/lib/form-validate.js', 'gas/news-sheet.js', 'gas/news-admin.js', 'gas/contact-form.js', 'gas/contact-api.js', 'gas/news-api.js',
+];
 
 const HEADER = ['ID', '日付', 'カテゴリ', 'タイトル', '本文', '添付ファイルURL', '公開フラグ', '固定順位'];
 const ATTACHMENT = 'https://drive.google.com/file/d/abc123/view';
